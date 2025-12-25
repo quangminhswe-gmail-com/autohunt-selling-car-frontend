@@ -1,4 +1,4 @@
-name: Build Front-End Production
+name: Build Front-End
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 
     paths:
       - "**"
-      - ".github/workflows/fe_carselling_prod.yml"
+      - ".github/workflows/fe_carselling.yml"
 
 jobs:
   buil-deploy:
@@ -34,11 +34,11 @@ jobs:
           password: "${{ secrets.DOCKER_ACCESS_KEYS }}"
 
       - name: Build Docker Images
-        uses: docker/build-push-action@v5
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/build-push-action@v2
         with:
           context: .
           load: true
-          target: production
           dockerfile: Dockerfile
           tags: "autohunt-selling-car-frontend:${{ github.sha }}"
 
@@ -51,8 +51,7 @@ jobs:
           severity: CRITICAL
 
       - name: Push to Dockerhub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v4
         with:
           context: .
           dockerfile: Dockerfile
