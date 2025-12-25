@@ -1,13 +1,14 @@
 services:
   frontend:
-    container_name: container_fronend
-    build: .
+    container_name: container_frontend
+    build: 
+     context: .
+     target: development
     ports:
       - "3000:3000"
     volumes:
       - ./:/app
       - /app/node_modules
-    command: npm run dev
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
