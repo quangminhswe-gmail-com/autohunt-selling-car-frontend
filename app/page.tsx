@@ -25,7 +25,7 @@ export default function TestPage() {
   return (
     <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
       <h1>Next.js + NestJS Docker Test (Optimized)</h1>
-      <p style={{ color: '#666' }}>Sử dụng ạdhaksjdhkajshdkajhdkajhdskhjd + Environment Variables</p>
+      <p style={{ color: '#666' }}>Sử dụng + Environment Variables</p>
 
       <button
         onClick={handleCreateUser}
