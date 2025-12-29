@@ -1,4 +1,4 @@
-name: Build Front-End
+name: Build Front-End Production
 on:
   push:
     branches:
@@ -9,11 +9,9 @@ on:
 
     paths:
       - "**"
-      - ".github/workflows/fe_carselling.yml"
-
 jobs:
   buil-deploy:
-    name: Build And Deploy FrontEnd
+    name: Build And Production FrontEnd
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,13 +32,15 @@ jobs:
           password: "${{ secrets.DOCKER_ACCESS_KEYS }}"
 
       - name: Build Docker Images
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           load: true
+          target: production
           dockerfile: Dockerfile
           tags: "autohunt-selling-car-frontend:${{ github.sha }}"
+          build-args: |
+            NEXT_PUBLIC_API_URL_PROD=${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
 
       - name: Vulnerability Scan
         uses: aquasecurity/trivy-action@master
@@ -51,7 +51,8 @@ jobs:
           severity: CRITICAL
 
       - name: Push to Dockerhub
-        uses: docker/build-push-action@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/build-push-action@v5
         with:
           context: .
           dockerfile: Dockerfile
