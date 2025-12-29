@@ -9,6 +9,7 @@ on:
 
     paths:
       - "**"
+      - ".github/workflows/fe_carsellung_prod.yml"
 jobs:
   buil-deploy:
     name: Build And Production FrontEnd
@@ -39,8 +40,8 @@ jobs:
           target: production
           dockerfile: Dockerfile
           tags: "autohunt-selling-car-frontend:${{ github.sha }}"
-          env: NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
-            API_URL_INTERNAL=${{ secrets.API_URL_INTERNAL_PROD }}
+          build-args: |
+            NEXT_PUBLIC_API_URL_PROD=${{ secrets.NEXT_PUBLIC_API_URL_PROD }}
 
       - name: Vulnerability Scan
         uses: aquasecurity/trivy-action@master
