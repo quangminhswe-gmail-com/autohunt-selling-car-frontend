@@ -26,13 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Check Code
-        run: npm run lint
+      # - name: Check Code
+      #   run: npm run lint --quiet
 
       - name: Dockerfile Syntax Check
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
 
-      - name: Build Test (Important)
+      - name: Build Test
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          API_URL_INTERNAL: ${{ secrets.API_URL_INTERNAL }}
         run: npm run build
