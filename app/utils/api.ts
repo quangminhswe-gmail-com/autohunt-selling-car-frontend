@@ -30,3 +30,8 @@ export const apiClient = async <T = any>(endpoint: string, options: ApiOptions =
     }
     return response.json();
 };
+
+// Vehicle API functions
+export const getVehicleById = async (id: string) => {
+    return apiClient(`/vehicle/${id}`);
+};
