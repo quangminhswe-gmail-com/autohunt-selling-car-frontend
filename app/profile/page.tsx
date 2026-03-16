@@ -503,7 +503,7 @@ export default function ProfilePage() {
                 {car.status === 'active' ? (
                   <div className="flex gap-2">
                     <Link
-                      href={`/vehicles/${car.id}/edit`}
+                      href={`/profile/vehicle/${car.id}/edit`}
                       className="flex-1"
                     >
                       <button className="w-full border text-black rounded-md py-2 text-sm hover:bg-gray-50">
