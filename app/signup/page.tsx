@@ -12,6 +12,9 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,17 +112,47 @@ export default function SignupPage() {
             </div>
             <div className="relative flex justify-center text-sm"></div>
           </div>
+          
 
           <form onSubmit={handleSignup} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+  <div className="relative">
+    <label className="absolute top-2 left-4 text-xs font-semibold text-gray-700">
+      First Name
+    </label>
+    <input
+      type="text"
+      value={firstName}
+      onChange={(e) => setFirstName(e.target.value)}
+      placeholder="Enter your first name"
+      className="w-full px-4 pt-7 pb-3 text-gray-900 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+      required
+    />
+  </div>
+
+  <div className="relative">
+    <label className="absolute top-2 left-4 text-xs font-semibold text-gray-700">
+      Last Name
+    </label>
+    <input
+      type="text"
+      value={lastName}
+      onChange={(e) => setLastName(e.target.value)}
+      placeholder="Enter your last name"
+      className="w-full px-4 pt-7 pb-3 text-gray-900 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+      required
+    />
+  </div>
+</div>
+
             <div className="relative">
               <label className="absolute top-2 left-4 text-xs font-semibold text-gray-700">Email</label>
-
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email address"
-                className="w-full px-4 pt-7 pb-3 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 pt-7 pb-3 text-gray-900 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 required
               />
             </div>
@@ -132,7 +165,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full px-4 pt-7 pb-3 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 pt-7 pb-3 text-gray-900 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 required
               />
 
@@ -162,7 +195,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Enter your confirm password"
-                className="w-full px-4 pt-7 pb-3 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 pt-7 pb-3 text-gray-900 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 required
               />
 
