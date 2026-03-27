@@ -1,15 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
+import { apiClient } from '@/app/utils/api';
 
 type SellerStatus = 'none' | 'pending' | 'approved' | 'rejected';
 type UserRole = 'admin' | 'customer';
 
+type User = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  role: UserRole;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  sellerStatus: SellerStatus;
+  avatarUrl: string;
+  rating: number;
+  totalPostings: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type VehicleStatus = 'active' | 'sold';
+
+type Posting = {
+  id?: string;
+  _id?: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  locationCity: string;
+  locationDistrict: string;
+  locationAddress: string;
+  vehicle: {
+    id?: string;
+    _id?: string;
+    make: string;
+    model: string;
+    yearOfManufacture: number;
+    licensePlate: string;
+    vinNumber: string;
+    color: string;
+    mileage: number;
+    transmission: string;
+    type: string;
+    fuelType: string;
+    condition: string;
+    features: string[];
+    price: number;
+    images: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+};
 
 const VEHICLE_LIST: Array<{
   id: string;
@@ -31,131 +81,130 @@ const VEHICLE_LIST: Array<{
   imageUrl: string;      // FE only
   createdAt: string;
   updatedAt: string;
-}> = [
-  {
-    id: 'veh_001',
-    make: 'toyota',
-    model: 'Camry',
-    yearOfManufacture: 2020,
-    licensePlate: '51H-12345',
-    vinNumber: 'JTNB11HK3K3054321',
-    color: 'White',
-    mileage: 45000,
-    transmission: 'automatic',
-    type: 'sedan',
-    fuelType: 'petrol',
-    condition: 'used',
-    vehicleFeatures: ['ABS', 'Cruise Control', 'Camera 360'],
-    price: 24500,
-    ownerId: 'user_001',
-    status: 'active',
-    imageUrl: '/2020camry.png',
-    createdAt: '2024-03-01',
-    updatedAt: '2024-05-01',
-  },
-  {
-    id: 'veh_002',
-    make: 'honda',
-    model: 'Accord',
-    yearOfManufacture: 2019,
-    licensePlate: '65A-88888',
-    vinNumber: '1HGCV1F30KA012345',
-    color: 'Silver',
-    mileage: 38000,
-    transmission: 'automatic',
-    type: 'sedan',
-    fuelType: 'petrol',
-    condition: 'used',
-    vehicleFeatures: ['Lane Assist', 'Sunroof'],
-    price: 22800,
-    ownerId: 'user_001',
-    status: 'active',
-    imageUrl: '/2019hondaaccord.png',
-    createdAt: '2024-02-10',
-    updatedAt: '2024-04-15',
-  },
-  {
-    id: 'veh_003',
-    make: 'bmw',
-    model: '3 Series',
-    yearOfManufacture: 2021,
-    licensePlate: '50H-99999',
-    vinNumber: 'WBA8D9C50JA123456',
-    color: 'White',
-    mileage: 25000,
-    transmission: 'automatic',
-    type: 'sedan',
-    fuelType: 'petrol',
-    condition: 'used',
-    vehicleFeatures: ['HUD', 'Sport Mode'],
-    price: 35900,
-    ownerId: 'user_001',
-    status: 'active',
-    imageUrl: '/2021bmw3seri.png',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-03-18',
-  },
-  {
-    id: 'veh_004',
-    make: 'audi',
-    model: 'A6',
-    yearOfManufacture: 2025,
-    licensePlate: '51A-77777',
-    vinNumber: 'WAUFGAFC7FN654321',
-    color: 'White',
-    mileage: 20000,
-    transmission: 'automatic',
-    type: 'sedan',
-    fuelType: 'hybrid',
-    condition: 'new',
-    vehicleFeatures: ['Adaptive Cruise', 'Premium Sound'],
-    price: 48500,
-    ownerId: 'user_001',
-    status: 'sold',
-    imageUrl: '/audi-a6.png',
-    createdAt: '2024-01-05',
-    updatedAt: '2024-06-01',
-  },
-];
+}> = [];
 
 
 export default function ProfilePage() {
-  // ✅ Mock user data (MATCH DB)
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [originalData, setOriginalData] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState('personal');
+  const [myListings, setMyListings] = useState<Posting[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+
   const [user, setUser] = useState({
-    id: 'user_001',
-    email: 'john.smith@example.com',
+    id: '',
+    email: '',
     password: '********',
-    firstName: 'John',
-    lastName: 'Smith',
-    phoneNumber: '+1 (555) 123-4567',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
 
     role: 'customer' as UserRole,
-    isEmailVerified: true,
-    isActive: true,
-    sellerStatus: 'approved' as SellerStatus,
+    isEmailVerified: false,
+    isActive: false,
+    sellerStatus: 'none' as SellerStatus,
 
     avatarUrl: '',
-    rating: 4.9,
-    totalPostings: 4,
+    rating: 0,
+    totalPostings: 0,
 
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-06-01T12:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   });
 
-  const [activeTab, setActiveTab] =
-    useState<'personal' | 'account' | 'listings'>('personal');
+  useEffect(() => {
+    const fetchUser = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await apiClient<any>('/users/me');
+        setUser({
+          id: data.id,
+          email: data.email,
+          password: '********',
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          phoneNumber: data.phoneNumber && data.phoneNumber !== 'false' ? data.phoneNumber : '',
+          role: data.role || 'customer',
+          isEmailVerified: data.isEmailVerified || false,
+          isActive: data.isActive || false,
+          sellerStatus: data.sellerStatus || 'none',
+          avatarUrl: data.avatarUrl || '',
+          rating: data.rating || 0,
+          totalPostings: data.totalPostings || 0,
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        });
+        setOriginalData(data);
+      } catch (err) {
+        console.error('Failed to load profile', err);
+        setError((err as Error).message || 'Could not load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const fetchMyListings = async () => {
+    setListingsLoading(true);
+    try {
+      const data = await apiClient<Posting[]>('/postings/my-postings');
+      setMyListings(data);
+    } catch (err) {
+      console.error('Failed to load listings', err);
+    } finally {
+      setListingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'listings') {
+      fetchMyListings();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    // Fetch listings on initial page load so postedCarsCount is accurate immediately.
+    fetchMyListings();
+  }, []);
+
 
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
   });
 
-  const canShowRating =
-    user.sellerStatus === 'approved' && user.totalPostings > 0;
+  const postedCarsCount = myListings.length;
 
-  const handleSave = () => {
-    console.log('Saving profile:', user);
-    alert('Profile saved successfully!');
+  const canShowRating =
+    user.sellerStatus === 'approved' && postedCarsCount > 0;
+
+  const handleSave = async () => {
+    if (!originalData) return;
+    try {
+      const updateData: any = {};
+      if (user.firstName !== originalData.firstName) updateData.firstName = user.firstName;
+      if (user.lastName !== originalData.lastName) updateData.lastName = user.lastName;
+      if (user.phoneNumber !== originalData.phoneNumber) updateData.phoneNumber = user.phoneNumber;
+
+      if (Object.keys(updateData).length > 0) {
+        await apiClient('/users/me', {
+          method: 'PATCH',
+          body: updateData,
+        });
+        setOriginalData({ ...originalData, ...updateData });
+        alert('Profile updated successfully!');
+      } else {
+        alert('No changes to save.');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile.');
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,8 +221,13 @@ export default function ProfilePage() {
 
       <main className="flex-1 py-8">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="bg-white rounded-lg shadow-sm border">
-            {/* ================= HEADER ================= */}
+          {loading ? (
+            <div className="rounded-lg border bg-white p-8 text-center text-gray-600">Loading profile...</div>
+          ) : error ? (
+            <div className="rounded-lg border bg-white p-8 text-center text-red-600">{error}</div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border">
+              {/* ================= HEADER ================= */}
             <div className="p-6 border-b">
               <div className="flex items-center justify-between flex-wrap gap-6">
                 <div className="flex items-center gap-5">
@@ -262,7 +316,7 @@ export default function ProfilePage() {
                 <div className="flex gap-10">
                   <div className="text-center">
                     <p className="text-xl font-bold text-gray-900">
-                      {user.totalPostings}
+                      {postedCarsCount}
                     </p>
                     <p className="text-sm text-gray-600">Cars Posted</p>
                   </div>
@@ -423,117 +477,108 @@ export default function ProfilePage() {
 
               {/* LISTINGS */}
               {activeTab === 'listings' && (
-  <div className="space-y-6">
-    <div className="flex items-center justify-between">
-      <h2 className="text-xl font-semibold text-gray-900">
-        My Listings
-      </h2>
-
-      <Link href="/sell">
-        <button className="bg-[#006557] text-white px-4 py-2 rounded-md hover:bg-[#005446]">
-          Add New Listing
-        </button>
-      </Link>
-    </div>
-
-    {/* 👉 EMPTY STATE (GIỮ NGUYÊN) */}
-    {VEHICLE_LIST.length === 0 && (
-      <div className="text-center py-12">
-        <h3 className="mt-2 text-sm font-medium text-gray-900">
-          No listings yet
-        </h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Get started by creating your first car listing.
-        </p>
-      </div>
-    )}
-
-    {/* 👉 LIST GRID */}
-    {VEHICLE_LIST.length > 0 && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {VEHICLE_LIST.map((car) => (
-          <div
-            key={car.id}
-            className="bg-white border rounded-lg shadow-sm overflow-hidden"
-          >
-            {/* Image */}
-            <div className="h-40 bg-gray-100">
-              <img
-                src={car.imageUrl}
-                alt={`${car.yearOfManufacture} ${car.make} ${car.model}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="p-4 space-y-2 flex-1 flex flex-col">
-              <h3 className="font-semibold text-gray-900">
-                {car.yearOfManufacture} {car.make.charAt(0).toUpperCase() + car.make.slice(1)} {car.model}
-              </h3>
-
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g clip-path="url(#clip0_250_798)">
-                      <path d="M2.625 0.875V1.75H1.3125C0.587891 1.75 0 2.33789 0 3.0625V4.375H12.25V3.0625C12.25 2.33789 11.6621 1.75 10.9375 1.75H9.625V0.875C9.625 0.391016 9.23398 0 8.75 0C8.26602 0 7.875 0.391016 7.875 0.875V1.75H4.375V0.875C4.375 0.391016 3.98398 0 3.5 0C3.01602 0 2.625 0.391016 2.625 0.875ZM12.25 5.25H0V12.6875C0 13.4121 0.587891 14 1.3125 14H10.9375C11.6621 14 12.25 13.4121 12.25 12.6875V5.25Z" fill="#4B5563"/>
-                    </g>
-                    <defs>
-                      <clipPath id="clip0_250_798">
-                        <path d="M0 0H12.25V14H0V0Z" fill="white"/>
-                      </clipPath>
-                    </defs>
-                  </svg>
-                  {car.yearOfManufacture}
-                </span>
-                <span className="flex items-center gap-1">
-                  <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 0H4.95469C4.21367 0 3.55195 0.467578 3.30586 1.16484L0.0847656 10.2594C0.0300781 10.418 0 10.5875 0 10.757C0 11.5801 0.669922 12.25 1.49297 12.25H7V10.5C7 10.016 7.39102 9.625 7.875 9.625C8.35898 9.625 8.75 10.016 8.75 10.5V12.25H14.257C15.0828 12.25 15.75 11.5801 15.75 10.757C15.75 10.5875 15.7199 10.418 15.6652 10.2594L12.4441 1.16484C12.1953 0.467578 11.5363 0 10.7953 0H8.75V1.75C8.75 2.23398 8.35898 2.625 7.875 2.625C7.39102 2.625 7 2.23398 7 1.75V0ZM8.75 5.25V7C8.75 7.48398 8.35898 7.875 7.875 7.875C7.39102 7.875 7 7.48398 7 7V5.25C7 4.76602 7.39102 4.375 7.875 4.375C8.35898 4.375 8.75 4.76602 8.75 5.25Z" fill="#4B5563"/>
-                  </svg>
-
-                  {car.mileage.toLocaleString()} mi
-                </span>
-              </div>
-
-              <p className="text-lg font-bold text-[#006557]">
-                ${car.price.toLocaleString()}
-              </p>
-
-              {/* Actions */}
-              <div className="mt-auto pt-2">
-                {car.status === 'active' ? (
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/profile/vehicle/${car.id}/edit`}
-                      className="flex-1"
-                    >
-                      <button className="w-full border text-black rounded-md py-2 text-sm hover:bg-gray-50">
-                        Edit
-                      </button>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-900">My Listings</h2>
+                    <Link href="/sell">
+                      <button className="bg-[#006557] text-white px-4 py-2 rounded-md hover:bg-[#005446]">Add New Listing</button>
                     </Link>
-
-                    <button className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]">
-                      Mark Sold
-                    </button>
                   </div>
-                ) : (
-                  <button
-                    disabled
-                    className="w-full bg-[#006557] text-white rounded-md py-2 text-sm opacity-70 cursor-default"
-                  >
-                    Sold!
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-)}
 
+                  {listingsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#006557] mx-auto"></div>
+                      <p className="mt-2 text-sm text-gray-500">Loading your listings...</p>
+                    </div>
+                  ) : myListings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No listings yet</h3>
+                      <p className="mt-1 text-sm text-gray-500">Get started by creating your first car listing.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {myListings.map((posting) => {
+                        const vehicle = posting.vehicle;
+                        const postingId = posting.id ?? posting._id;
+                        const vehicleId = vehicle?.id ?? vehicle?._id;
+                        const imageSrc = vehicle?.images?.length ? vehicle.images[0] : undefined;
+                        if (!vehicleId) {
+                          return null;
+                        }
+
+                        return (
+                          <div key={postingId ?? posting._id ?? posting.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                            <Link href={`/vehicle/${postingId}`} className="block">
+                              <div className="h-40 bg-gray-100">
+                                {imageSrc ? (
+                                  <img
+                                    src={imageSrc}
+                                    alt={`${vehicle?.yearOfManufacture ?? ''} ${vehicle?.make ?? ''} ${vehicle?.model ?? ''}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                    No Image
+                                  </div>
+                                )}
+                              </div>
+                            </Link>
+
+                            <div className="p-4 space-y-2 flex-1 flex flex-col">
+                              <Link href={`/vehicle/${posting.id}`} className="block">
+                                <h3 className="text-lg font-semibold text-gray-900 hover:text-[#006557]">
+                                  {vehicle ? `${vehicle.yearOfManufacture} ${vehicle.make} ${vehicle.model}` : 'Unknown Vehicle'}
+                                </h3>
+                              </Link>
+
+                              <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <svg width="13" height="14" viewBox="0 0 13 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2.625 0.875V1.75H1.3125C0.587891 1.75 0 2.33789 0 3.0625V4.375H12.25V3.0625C12.25 2.33789 11.6621 1.75 10.9375 1.75H9.625V0.875C9.625 0.391016 9.23398 0 8.75 0C8.26602 0 7.875 0.391016 7.875 0.875V1.75H4.375V0.875C4.375 0.391016 3.98398 0 3.5 0C3.01602 0 2.625 0.391016 2.625 0.875ZM12.25 5.25H0V12.6875C0 13.4121 0.587891 14 1.3125 14H10.9375C11.6621 14 12.25 13.4121 12.25 12.6875V5.25Z" fill="#4B5563"/>
+                                  </svg>
+                                  <span>{vehicle?.yearOfManufacture || 0}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M7 0H4.95469C4.21367 0 3.55195 0.467578 3.30586 1.16484L0.0847656 10.2594C0.0300781 10.418 0 10.5875 0 10.757C0 11.5801 0.669922 12.25 1.49297 12.25H7V10.5C7 10.016 7.39102 9.625 7.875 9.625C8.35898 9.625 8.75 10.016 8.75 10.5V12.25H14.257C15.0828 12.25 15.75 11.5801 15.75 10.757C15.75 10.5875 15.7199 10.418 15.6652 10.2594L12.4441 1.16484C12.1953 0.467578 11.5363 0 10.7953 0H8.75V1.75C8.75 2.23398 8.35898 2.625 7.875 2.625C7.39102 2.625 7 2.23398 7 1.75V0ZM8.75 5.25V7C8.75 7.48398 8.35898 7.875 7.875 7.875C7.39102 7.875 7 7.48398 7 7V5.25C7 4.76602 7.39102 4.375 7.875 4.375C8.35898 4.375 8.75 4.76602 8.75 5.25Z" fill="#4B5563"/>
+                                  </svg>
+                                  <span>{vehicle?.mileage?.toLocaleString() || 0} km</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-2xl font-bold text-[#006557]">${posting.price.toLocaleString()}</p>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <svg width="11" height="14" viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5.89805 13.65C7.30078 11.8945 10.5 7.63984 10.5 5.25C10.5 2.35156 8.14844 0 5.25 0C2.35156 0 0 2.35156 0 5.25C0 7.63984 3.19922 11.8945 4.60195 13.65C4.93828 14.0684 5.56172 14.0684 5.89805 13.65ZM5.25 3.5C5.71413 3.5 6.15925 3.68437 6.48744 4.01256C6.81563 4.34075 7 4.78587 7 5.25C7 5.71413 6.81563 6.15925 6.48744 6.48744C6.15925 6.81563 5.71413 7 5.25 7C4.78587 7 4.34075 6.81563 4.01256 6.48744C3.68437 6.15925 3.5 5.71413 3.5 5.25C3.5 4.78587 3.68437 4.34075 4.01256 4.01256C4.34075 3.68437 4.78587 3.5 5.25 3.5Z" fill="#6B7280"/>
+                                  </svg>
+                                  <span>{posting.locationCity ? posting.locationCity : 'Unknown location'}</span>
+                                </div>
+                              </div>
+
+                              <div className="mt-auto pt-2">
+                                <div className="flex gap-2">
+                                  {vehicle ? (
+                                    <Link href={`/profile/vehicle/${vehicleId}/edit`} className="flex-1">
+                                      <button className="w-full border text-black rounded-md py-2 text-sm hover:bg-gray-50">Edit</button>
+                                    </Link>
+                                  ) : (
+                                    <button className="flex-1 border text-gray-400 rounded-md py-2 text-sm cursor-not-allowed" disabled>Edit</button>
+                                  )}
+                                  <button className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]">Mark Sold</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+          )}
         </div>
       </main>
 

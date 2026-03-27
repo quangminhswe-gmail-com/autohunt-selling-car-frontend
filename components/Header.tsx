@@ -3,12 +3,30 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
-  // MOCK AUTH STATE
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateAuthState = () => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(Boolean(token));
+    };
+
+    updateAuthState();
+
+    window.addEventListener("authChange", updateAuthState);
+    window.addEventListener("storage", updateAuthState);
+
+    return () => {
+      window.removeEventListener("authChange", updateAuthState);
+      window.removeEventListener("storage", updateAuthState);
+    };
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -108,8 +126,11 @@ export default function Header() {
                       </Link>
                       <button
                         onClick={() => {
+                          localStorage.removeItem("token");
+                          window.dispatchEvent(new Event("authChange"));
                           setIsLoggedIn(false);
                           setOpen(false);
+                          router.push("/login");
                         }}
                         className="w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                       >

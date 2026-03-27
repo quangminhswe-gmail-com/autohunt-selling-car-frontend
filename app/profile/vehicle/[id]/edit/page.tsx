@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { apiClient } from '@/app/utils/api';
 
 interface ImageFile {
   file?: File;
@@ -13,11 +14,11 @@ interface ImageFile {
 interface FormDataType {
   make: string;
   model: string;
-  yearOfManufacture: string;
+  yearOfManufacture: number | '';
   licensePlate: string;
   vinNumber: string;
   color: string;
-  mileage: string;
+  mileage: number | '';
   transmission: string;
   type: string;
   fuelType: string;
@@ -25,13 +26,45 @@ interface FormDataType {
   vehicleFeatures: string[];
   title: string;
   description: string;
-  price: string;
+  price: number | '';
   currency: string;
   locationCity: string;
   locationDistrict: string;
   locationAddress: string;
   images: ImageFile[];
+  termsAccepted: boolean;
 }
+
+const COMMON_FEATURES = [
+  'Air Conditioning',
+  'Power Steering',
+  'Power Windows',
+  'Power Locks',
+  'ABS Brakes',
+  'Airbags',
+  'Cruise Control',
+  'Bluetooth',
+  'USB Ports',
+  'Backup Camera',
+  'Navigation System',
+  'Heated Seats',
+  'Leather Seats',
+  'Sunroof',
+  'Alloy Wheels',
+  'Fog Lights',
+  'Tinted Windows',
+  'Roof Rack',
+  'Tow Package',
+  'Keyless Entry',
+  'Remote Start',
+  'Original Paint',
+  'Clean Interior',
+  'No Accidents',
+  'Single Owner',
+  'Service Records',
+  'Warranty',
+  'Low Mileage'
+];
 
 export default function EditVehiclePage() {
   const router = useRouter();
@@ -40,7 +73,8 @@ export default function EditVehiclePage() {
 
   const [activeTab, setActiveTab] = useState('vehicle');
   const [loading, setLoading] = useState(true);
-  const [featureInput, setFeatureInput] = useState('');
+  const [hasActivePosting, setHasActivePosting] = useState(false);
+  const [postingId, setPostingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormDataType>({
     make: '',
     model: '',
@@ -52,75 +86,101 @@ export default function EditVehiclePage() {
     transmission: '',
     type: '',
     fuelType: '',
-    condition: 'Used',
+    condition: 'used',
     vehicleFeatures: [],
     title: '',
     description: '',
     price: '',
-    currency: 'VND',
+    currency: 'USD',
     locationCity: '',
     locationDistrict: '',
     locationAddress: '',
     images: [],
+    termsAccepted: false,
   });
 
-  useEffect(() => {
-    if (!vehicleId) {
-      setLoading(false);
-      return;
-    }
+  const [originalImages, setOriginalImages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    const mockData: FormDataType = {
-      make: 'toyota',
-      model: 'Camry',
-      yearOfManufacture: '2019',
-      licensePlate: '30A-12345',
-      vinNumber: 'JTNBE46K973012345',
-      color: 'White',
-      mileage: '45000',
-      transmission: 'automatic',
-      type: 'sedan',
-      fuelType: 'petrol',
-      condition: 'Used',
-      vehicleFeatures: ['Leather seats', 'Sunroof'],
-      title: 'Toyota Camry 2019 - Well Maintained',
-      description: 'Full service history. No accidents. Clean interior.',
-      price: '650000000',
-      currency: 'VND',
-      locationCity: 'hanoi',
-      locationDistrict: 'Ba Dinh',
-      locationAddress: '123 Example Street',
-      images: [
-        { preview: '/2020camry.png' },
-        { preview: '/2020camry.png' },
-      ],
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      if (!vehicleId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await apiClient<any[]>('/vehicle/my-vehicles');
+        const found = data.find((v) => v._id === vehicleId || v.id === vehicleId);
+        if (!found) {
+          alert('Không tìm thấy xe.');
+          router.push('/profile');
+          return;
+        }
+
+        const myPostings = await apiClient<any[]>('/postings/my-postings');
+        const linkedPosting = myPostings.find(
+          (p) => p.vehicle?.id === vehicleId || p.vehicle?._id === vehicleId || p.vehicleId === vehicleId,
+        );
+        setHasActivePosting(Boolean(linkedPosting));
+        if (linkedPosting) {
+          setPostingId(linkedPosting.id || linkedPosting._id);
+        }
+
+        setFormData({
+          make: found.make || '',
+          model: found.model || '',
+          yearOfManufacture: found.yearOfManufacture || '',
+          licensePlate: found.licensePlate || '',
+          vinNumber: found.vinNumber || '',
+          color: found.color || '',
+          mileage: found.mileage || '',
+          transmission: found.transmission || '',
+          type: found.type || '',
+          fuelType: found.fuelType || '',
+          condition: found.condition || 'used',
+          vehicleFeatures: found.features || [],
+          title: linkedPosting?.title || '',
+          description: linkedPosting?.description || found.description || '',
+          price: linkedPosting?.price || found.price || '',
+          currency: linkedPosting?.currency || 'USD',
+          locationCity: linkedPosting?.locationCity || '',
+          locationDistrict: linkedPosting?.locationDistrict || '',
+          locationAddress: linkedPosting?.locationAddress || '',
+          images: (found.images || []).map((img: string) => ({ preview: img })),
+          termsAccepted: false,
+        });
+        setOriginalImages(found.images || []);
+      } catch (err) {
+        console.error('Failed to load vehicle details', err);
+        alert('Failed to load vehicle details.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(() => {
-      setFormData(mockData);
-      setLoading(false);
-    }, 300);
-  }, [vehicleId]);
+    fetchVehicle();
+  }, [vehicleId, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+    const numberFields = ['yearOfManufacture', 'mileage', 'price'];
 
-  const handleAddFeature = () => {
-    if (featureInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        vehicleFeatures: [...prev.vehicleFeatures, featureInput.trim()]
-      }));
-      setFeatureInput('');
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      vehicleFeatures: prev.vehicleFeatures.filter((_, i) => i !== index)
+      [name]: numberFields.includes(name) ? (value === '' ? '' : parseInt(value)) : value
+    }));
+    setError('');
+  };
+
+  const handleFeatureChange = (feature: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      vehicleFeatures: checked
+        ? [...prev.vehicleFeatures, feature]
+        : prev.vehicleFeatures.filter(f => f !== feature)
     }));
   };
 
@@ -145,22 +205,158 @@ export default function EditVehiclePage() {
     }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const validateForm = (): boolean => {
+    if (!formData.make || !formData.model || formData.yearOfManufacture === '' ||
+        !formData.licensePlate || !formData.transmission || !formData.type || !formData.fuelType) {
+      setError('Please fill in all required vehicle information fields');
+      return false;
+    }
+
+    if (!formData.title || !formData.description || formData.price === '' ||
+        !formData.locationCity || !formData.locationDistrict) {
+      setError('Please fill in all listing information fields');
+      return false;
+    }
+
+    if (formData.images.length === 0) {
+      setError('Please upload at least one image');
+      return false;
+    }
+
+    if (!formData.termsAccepted) {
+      setError('Please accept the terms and conditions');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Saving vehicle', vehicleId, formData);
-    alert('Vehicle updated successfully.');
-    router.push('/profile');
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Calculate removed images
+      const currentImageUrls = formData.images.map(img => img.preview);
+      const removedImages = originalImages.filter(url => !currentImageUrls.includes(url));
+
+      // Prepare data for PATCH
+      const updateData: any = {
+        make: formData.make,
+        model: formData.model,
+        yearOfManufacture: Number(formData.yearOfManufacture),
+        licensePlate: formData.licensePlate,
+        vinNumber: formData.vinNumber,
+        color: formData.color,
+        mileage: Number(formData.mileage),
+        transmission: formData.transmission,
+        type: formData.type,
+        fuelType: formData.fuelType,
+        condition: formData.condition,
+        features: formData.vehicleFeatures,
+        price: Number(formData.price),
+        description: formData.description,
+      };
+
+      // Handle images: new files to upload
+      const newImages = formData.images.filter(img => img.file);
+
+      const formDataMultipart = new FormData();
+      
+      // Add new images
+      newImages.forEach((imageFile) => {
+        formDataMultipart.append('images', imageFile.file!);
+      });
+
+      // Add removeImages as separate field
+      removedImages.forEach((url) => {
+        formDataMultipart.append('removeImages', url);
+      });
+
+      // Add other data as individual form fields
+      Object.keys(updateData).forEach(key => {
+        if (key !== 'removeImages') {
+          const value = updateData[key];
+          if (Array.isArray(value)) {
+            value.forEach(item => formDataMultipart.append(key, item));
+          } else {
+            formDataMultipart.append(key, String(value));
+          }
+        }
+      });
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/vehicle/${vehicleId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formDataMultipart,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update vehicle');
+      }
+
+      // Update posting if exists
+      if (postingId) {
+        const postingUpdateData = {
+          title: formData.title,
+          description: formData.description,
+          price: Number(formData.price),
+          currency: formData.currency,
+          locationCity: formData.locationCity,
+          locationDistrict: formData.locationDistrict,
+          locationAddress: formData.locationAddress,
+        };
+
+        const postingResponse = await apiClient(`/postings/${postingId}`, {
+          method: 'PATCH',
+          body: postingUpdateData,
+        });
+
+        if (!postingResponse) {
+          throw new Error('Failed to update posting');
+        }
+      }
+
+      alert('Listing updated successfully.');
+      router.push('/profile');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      console.error('Update error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = async () => {
-    if (!vehicleId) return;
-    const confirmed = confirm('Are you sure you want to delete this vehicle? This action cannot be undone.');
+    if (!postingId) {
+      alert('No active posting to delete.');
+      return;
+    }
+
+    const confirmed = confirm('Are you sure you want to delete this listing? This action cannot be undone.');
     if (!confirmed) return;
 
-    // TODO: call API to delete vehicle by id
-    console.log('Deleting vehicle', vehicleId);
-    alert('Vehicle deleted (UI only).');
-    router.push('/profile');
+    try {
+      setLoading(true);
+      await apiClient(`/postings/${postingId}`, { method: 'DELETE' });
+      alert('Listing deleted successfully.');
+      router.push('/profile');
+    } catch (err) {
+      console.error('Failed to delete posting:', err);
+      const errMsg = err instanceof Error ? err.message : 'Failed to delete listing.';
+      alert(errMsg || 'Failed to delete listing.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -179,10 +375,28 @@ export default function EditVehiclePage() {
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Edit Vehicle</h1>
-            <p className="text-gray-600 mt-2">Update your vehicle information</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Post Your Car for Sale</h1>
+              <p className="text-gray-600 mt-2">Share your vehicle information to find the ideal buyer</p>
+            </div>
+            {hasActivePosting && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-3 py-1.5 bg-red-600 text-white text-sm rounded font-medium hover:bg-red-700 transition whitespace-nowrap"
+              >
+                Delete
+              </button>
+            )}
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">{error}</p>
+            </div>
+          )}
 
           {/* Progress Steps */}
           <div className="mb-8">
@@ -208,12 +422,12 @@ export default function EditVehiclePage() {
 
           {/* Form Content */}
           <form onSubmit={handleSave} className="bg-white rounded-lg shadow-md p-6 md:p-8">
-            
+
             {/* Vehicle Information Tab */}
             {activeTab === 'vehicle' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Vehicle Information</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -222,6 +436,7 @@ export default function EditVehiclePage() {
                     <input
                       type="text"
                       name="make"
+                      placeholder="Enter vehicle make"
                       value={formData.make}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -238,6 +453,7 @@ export default function EditVehiclePage() {
                       name="model"
                       value={formData.model}
                       onChange={handleInputChange}
+                      placeholder="E.g. Civic, Camry, Ranger"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -252,6 +468,7 @@ export default function EditVehiclePage() {
                       name="yearOfManufacture"
                       value={formData.yearOfManufacture}
                       onChange={handleInputChange}
+                      placeholder="E.g. 2020"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -259,14 +476,16 @@ export default function EditVehiclePage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      License Plate
+                      License Plate <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="licensePlate"
                       value={formData.licensePlate}
                       onChange={handleInputChange}
+                      placeholder="E.g. 30A1-12345"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
                     />
                   </div>
 
@@ -292,6 +511,7 @@ export default function EditVehiclePage() {
                       name="color"
                       value={formData.color}
                       onChange={handleInputChange}
+                      placeholder="E.g. Black, White, Gray"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -306,6 +526,7 @@ export default function EditVehiclePage() {
                       name="mileage"
                       value={formData.mileage}
                       onChange={handleInputChange}
+                      placeholder="E.g. 50000"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -322,9 +543,9 @@ export default function EditVehiclePage() {
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="">Select transmission type</option>
-                      <option value="manual">Manual</option>
+                      <option value="">Select transmission</option>
                       <option value="automatic">Automatic</option>
+                      <option value="manual">Manual</option>
                       <option value="cvt">CVT</option>
                     </select>
                   </div>
@@ -380,81 +601,71 @@ export default function EditVehiclePage() {
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="New">New</option>
-                      <option value="Used">Used</option>
+                      <option value="new">New</option>
+                      <option value="used">Used</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Features */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
                     Key Features
                   </label>
-                  <div className="flex gap-2 mb-4">
-                    <input
-                      type="text"
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
-                      placeholder="E.g. Original paint, Clean interior"
-                      className="flex-1 px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddFeature}
-                      className="px-4 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.vehicleFeatures.map((feature, index) => (
-                      <div
-                        key={index}
-                        className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full"
-                      >
-                        <span>{feature}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFeature(index)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          ×
-                        </button>
-                      </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {COMMON_FEATURES.map((feature) => (
+                      <label key={feature} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.vehicleFeatures.includes(feature)}
+                          onChange={(e) => handleFeatureChange(feature, e.target.checked)}
+                          className="w-4 h-4 text-[#006557] border-gray-300 rounded focus:ring-[#006557]"
+                        />
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </label>
                     ))}
                   </div>
+                  {formData.vehicleFeatures.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600 mb-2">Selected features:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.vehicleFeatures.map((feature, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Navigation Buttons */}
-                {/* Navigation Buttons */}
                 <div className="flex justify-end gap-4 mt-8">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('posting')}
-                      className="px-6 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Next →
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('posting')}
+                    className="px-6 py-2 bg-[#006557] text-white rounded-lg"
+                  >
+                    Next →
+                  </button>
                 </div>
+
+                {hasActivePosting && (
+                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
+                    This vehicle is currently linked to one or more active postings. Delete the posting from My Listings first, then you can delete this vehicle.
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Posting Information Tab */}
+            {/* Listing Information Tab */}
             {activeTab === 'posting' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Listing Information</h2>
-                
+
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -465,6 +676,7 @@ export default function EditVehiclePage() {
                       name="title"
                       value={formData.title}
                       onChange={handleInputChange}
+                      placeholder="E.g. Honda Civic 2020 Manual, Pristine Condition"
                       maxLength={100}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
@@ -480,6 +692,7 @@ export default function EditVehiclePage() {
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
+                      placeholder="Describe the vehicle condition, maintenance history, any issues..."
                       rows={6}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
@@ -496,6 +709,7 @@ export default function EditVehiclePage() {
                         name="price"
                         value={formData.price}
                         onChange={handleInputChange}
+                        placeholder="E.g. 500000000"
                         className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
@@ -511,7 +725,6 @@ export default function EditVehiclePage() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="VND">VND (₫)</option>
                         <option value="USD">USD ($)</option>
                       </select>
                     </div>
@@ -525,20 +738,15 @@ export default function EditVehiclePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           State/Province <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <input
+                          type="text"
                           name="locationCity"
+                          placeholder="Enter State/Province"
                           value={formData.locationCity}
                           onChange={handleInputChange}
                           className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
-                        >
-                          <option value="">Select State/Province</option>
-                          <option value="hanoi">Hanoi</option>
-                          <option value="hcm">Ho Chi Minh City</option>
-                          <option value="danang">Da Nang</option>
-                          <option value="haiphong">Hai Phong</option>
-                          <option value="hochiminh">HCMC</option>
-                        </select>
+                        />
                       </div>
 
                       <div>
@@ -550,6 +758,7 @@ export default function EditVehiclePage() {
                           name="locationDistrict"
                           value={formData.locationDistrict}
                           onChange={handleInputChange}
+                          placeholder="E.g. District 1, Ba Vi District"
                           className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
                         />
@@ -564,6 +773,7 @@ export default function EditVehiclePage() {
                           name="locationAddress"
                           value={formData.locationAddress}
                           onChange={handleInputChange}
+                          placeholder="Street address and house number"
                           className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
@@ -580,22 +790,13 @@ export default function EditVehiclePage() {
                   >
                     ← Back
                   </button>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('images')}
-                      className="px-6 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Next →
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('images')}
+                    className="px-6 py-2 bg-[#006557] text-white rounded-lg"
+                  >
+                    Next →
+                  </button>
                 </div>
               </div>
             )}
@@ -685,22 +886,13 @@ export default function EditVehiclePage() {
                   >
                     ← Back
                   </button>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('preview')}
-                      className="px-6 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Next →
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('preview')}
+                    className="px-6 py-2 bg-[#006557] text-white rounded-lg"
+                  >
+                    Next →
+                  </button>
                 </div>
               </div>
             )}
@@ -708,7 +900,7 @@ export default function EditVehiclePage() {
             {/* Preview Tab */}
             {activeTab === 'preview' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">Review Changes</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Review Information</h2>
 
                 {/* Vehicle Summary */}
                 <div className="bg-gray-50 rounded-lg p-6">
@@ -761,7 +953,7 @@ export default function EditVehiclePage() {
                     <div>
                       <p className="text-gray-600">Price</p>
                       <p className="font-medium text-gray-900 text-blue-600">
-                        {formData.price ? `${parseInt(formData.price).toLocaleString()} ${formData.currency}` : '-'}
+                        {formData.price ? `${(formData.price as number).toLocaleString()} ${formData.currency}` : '-'}
                       </p>
                     </div>
                     {formData.vehicleFeatures.length > 0 && (
@@ -779,17 +971,13 @@ export default function EditVehiclePage() {
                   </div>
                 </div>
 
-                {/* Listing Summary */}
+                {/* Posting Summary */}
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h3 className="font-semibold text-lg text-gray-900 mb-4">Listing Information</h3>
                   <div className="space-y-3">
                     <div>
                       <p className="text-gray-600 text-sm">Title</p>
                       <p className="font-medium text-gray-900">{formData.title || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Description</p>
-                      <p className="font-medium text-gray-900">{formData.description || '-'}</p>
                     </div>
                     <div>
                       <p className="text-gray-600 text-sm">Location</p>
@@ -826,6 +1014,22 @@ export default function EditVehiclePage() {
                   </div>
                 )}
 
+                {/* Terms & Conditions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <input
+                      type="checkbox"
+                      id="terms"
+                      checked={formData.termsAccepted}
+                      onChange={(e) => setFormData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
+                      className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="terms" className="text-sm text-gray-700">
+                      I agree to the terms of service and confirm that all information above is accurate
+                    </label>
+                  </div>
+                </div>
+
                 {/* Navigation Buttons */}
                 <div className="flex justify-between gap-4 mt-8">
                   <button
@@ -835,21 +1039,13 @@ export default function EditVehiclePage() {
                   >
                     ← Back
                   </button>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Updating...' : 'Update Listing'}
+                  </button>
                 </div>
               </div>
             )}
