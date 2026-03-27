@@ -2,28 +2,40 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { apiClient } from "@/app/utils/api";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
     setLoading(true);
-    
+
     try {
-      // API call would go here
-      console.log("Login attempt:", { email, password });
-      // const response = await apiClient('/auth/login', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ email, password })
-      // });
-    } catch (error) {
-      console.error("Login error:", error);
+      const data = await apiClient<any>("/auth/sign-in", {
+        method: "POST",
+        body: { email, password },
+      });
+      console.log("Login success", data);
+      // Backend returns accessToken (camel case), not access_token
+      localStorage.setItem("token", data.accessToken || "");
+      window.dispatchEvent(new Event("authChange"));
+      setSuccess("Login successful. Redirecting...");
+      setTimeout(() => router.push("/profile"), 1000);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError((err as Error).message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -202,6 +214,17 @@ export default function LoginPage() {
   </button>
 </div>
 
+
+            {error && (
+              <div className="p-3 bg-red-100 text-red-800 border border-red-300 rounded-lg text-sm mb-2">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-100 text-green-800 border border-green-300 rounded-lg text-sm mb-2">
+                {success}
+              </div>
+            )}
 
             {/* Login Button */}
             <button

@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { apiClient } from "@/app/utils/api";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -14,18 +17,37 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // API call would go here
-      console.log("Signup attempt:", { email, password, confirmPassword });
-      // Example: await apiClient('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password }) })
-    } catch (error) {
-      console.error("Signup error:", error);
+      const data = await apiClient<any>("/auth/sign-up", {
+        method: "POST",
+        body: { firstName, lastName, email, password },
+      });
+
+      console.log("Signup success", data);
+      if (data.access_token) {
+        localStorage.setItem("token", data.access_token);
+      }
+      setSuccess("Registration successful. Redirecting to login...");
+      setTimeout(() => router.push("/login"), 1300);
+    } catch (err) {
+      console.error("Signup error:", err);
+      setError((err as Error).message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -217,6 +239,16 @@ export default function SignupPage() {
               </button>
             </div>
 
+            {error && (
+              <div className="p-3 bg-red-100 text-red-800 border border-red-300 rounded-lg text-sm mb-2">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-100 text-green-800 border border-green-300 rounded-lg text-sm mb-2">
+                {success}
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}

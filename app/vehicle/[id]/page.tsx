@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
+import { apiClient } from '@/app/utils/api';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
 
@@ -21,51 +21,25 @@ interface Vehicle {
   type: string;
   fuelType: string;
   condition: string;
-  vehicleFeatures: string[];
+  features: string[];
   description: string;
   price: number;
+  images: string[];
 }
 
-/* ================= MOCK ================= */
-const mockVehicle: Vehicle = {
-  id: '1',
-  make: 'BMW',
-  model: '3 Series',
-  yearOfManufacture: 2021,
-  licensePlate: 'ABC-1234',
-  vinNumber: 'WBA5A5C57KA123456',
-  color: 'Mineral Grey',
-  mileage: 32500,
-  transmission: 'Automatic',
-  type: 'Sedan',
-  fuelType: 'Petrol',
-  condition: 'Used',
-  vehicleFeatures: [
-    'Advanced Safety Package',
-    'Bluetooth Connectivity',
-    'Sunroof',
-    'Climate Control',
-    'Backup Camera',
-    'Navigation System',
-    'Blind Spot Monitoring',
-    'Lane Departure Warning'
-  ],
-  description: `This BMW 3 Series is in excellent condition with a full service history.
-    The car has been carefully maintained and driven primarily on highways.
-
-    It comes equipped with premium interior materials, modern infotainment,
-    advanced safety systems, and delivers a smooth yet sporty driving experience.
-
-    Perfect for both daily commuting and long-distance travel.`,
-    price: 45900
-    };
-
-/* ================= ICON ================= */
-const StarIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-  </svg>
-);
+interface Posting {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  locationCity?: string;
+  locationDistrict?: string;
+  locationAddress?: string;
+  vehicle: Vehicle;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const RELATED_CARS = [
   {
@@ -110,26 +84,115 @@ const RELATED_CARS = [
   },
 ];
 
+/* ================= ICON ================= */
+const StarIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+  </svg>
+);
 
 /* ================= PAGE ================= */
 export default function VehicleDetailsPage() {
   const { id } = useParams();
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [posting, setPosting] = useState<Posting | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [showAllFeatures, setShowAllFeatures] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [selectedCars] = useState(RELATED_CARS);
-  
-    const handleContactSeller = (carId: number) => {
-      alert(`Contacting seller for car ${carId}`);
-    };
-  
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const handleContactSeller = (carId: number | string) => {
+    alert(`Contacting seller for posting ${carId}`);
+  };
+
+  const openImageViewer = (index: number) => {
+    setCurrentImageIndex(index);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+  };
+
+  const nextImage = () => {
+    if (posting?.vehicle?.images) {
+      setCurrentImageIndex((prev) => (prev + 1) % posting.vehicle.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (posting?.vehicle?.images) {
+      setCurrentImageIndex((prev) => (prev - 1 + posting.vehicle.images.length) % posting.vehicle.images.length);
+    }
+  };
 
   useEffect(() => {
-    setVehicle(mockVehicle);
+    const fetchPosting = async () => {
+      if (!id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiClient<Posting>(`/postings/details/${id}`);
+        setPosting(data);
+      } catch (err) {
+        console.error('Failed to load posting details', err);
+        setError((err as Error).message || 'Failed to load posting details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosting();
   }, [id]);
 
-  if (!vehicle) return null;
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!imageViewerOpen) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          prevImage();
+          break;
+        case 'ArrowRight':
+          nextImage();
+          break;
+        case 'Escape':
+          closeImageViewer();
+          break;
+      }
+    };
+
+    if (imageViewerOpen) {
+      document.addEventListener('keydown', handleKeyPress);
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+      document.body.style.overflow = 'unset';
+    };
+  }, [imageViewerOpen, currentImageIndex]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-gray-500">Loading car details...</p>
+      </div>
+    );
+  }
+
+  if (error || !posting?.vehicle) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-red-500">{error || 'Vehicle details not found.'}</p>
+      </div>
+    );
+  }
+
+  const vehicle = posting.vehicle;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -143,30 +206,37 @@ export default function VehicleDetailsPage() {
 
             {/* IMAGE GALLERY */}
             <div className="bg-white rounded-xl p-4 shadow">
-              <div className="relative w-full h-[380px] rounded-lg overflow-hidden">
-                <Image
-                  src="/audi-a6.png"
-                  alt="Car"
-                  fill
-                  className="object-cover"
-                />
+              <div className="w-full h-[380px] rounded-lg overflow-hidden bg-gray-200 cursor-pointer" onClick={() => openImageViewer(0)}>
+                {vehicle.images && vehicle.images.length > 0 ? (
+                  <img
+                    src={vehicle.images[0]}
+                    alt={`${vehicle.yearOfManufacture} ${vehicle.make} ${vehicle.model}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    No Image Available
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-4 gap-3 mt-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="relative h-20 rounded-md overflow-hidden border"
-                  >
-                    <Image
-                      src="/audi-a6.png"
-                      alt="Thumbnail"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              {vehicle.images && vehicle.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-3 mt-4">
+                  {vehicle.images.slice(0, 4).map((img, i) => (
+                    <div
+                      key={i}
+                      className="h-20 rounded-md overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => openImageViewer(i)}
+                    >
+                      <img
+                        src={img}
+                        alt={`Thumbnail ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* FEATURES */}
@@ -177,8 +247,8 @@ export default function VehicleDetailsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(showAllFeatures
-                  ? vehicle.vehicleFeatures
-                  : vehicle.vehicleFeatures.slice(0, 4)
+                  ? vehicle.features
+                  : vehicle.features.slice(0, 4)
                 ).map((f, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -197,7 +267,7 @@ export default function VehicleDetailsPage() {
                 ))}
               </div>
 
-              {vehicle.vehicleFeatures.length > 4 && (
+              {vehicle.features.length > 4 && (
                 <button
                   onClick={() => setShowAllFeatures(!showAllFeatures)}
                   className="text-green-700 text-sm mt-4 font-medium"
@@ -215,8 +285,8 @@ export default function VehicleDetailsPage() {
 
               <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
                 {showFullDescription
-                  ? vehicle.description
-                  : vehicle.description.slice(0, 180) + '...'}
+                  ? posting.description || vehicle.description
+                  : (posting.description || vehicle.description).slice(0, 180) + '...'}
               </p>
 
               <button
@@ -277,11 +347,11 @@ export default function VehicleDetailsPage() {
                 <Spec label="Year" value={vehicle.yearOfManufacture} />
                 <Spec label="License Plate" value={vehicle.licensePlate} />
                 <Spec label="VIN" value={vehicle.vinNumber} />
-                <Spec label="Color" value={vehicle.color} />
+                <Spec label="Color" value={toTitleCase(vehicle.color)} />
                 <Spec label="Mileage" value={`${vehicle.mileage} km`} />
-                <Spec label="Transmission" value={vehicle.transmission} />
-                <Spec label="Body Type" value={vehicle.type} />
-                <Spec label="Fuel Type" value={vehicle.fuelType} />
+                <Spec label="Transmission" value={toTitleCase(vehicle.transmission)} />
+                <Spec label="Body Type" value={toTitleCase(vehicle.type)} />
+                <Spec label="Fuel Type" value={toTitleCase(vehicle.fuelType)} />
               </div>
             </div>
 
@@ -403,10 +473,77 @@ export default function VehicleDetailsPage() {
         </div>
       </section>
 
+      {/* Image Viewer Modal */}
+      {imageViewerOpen && vehicle.images && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+          {/* Close Button - Outside the image frame */}
+          <button
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 z-20 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75 transition"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Image Container */}
+          <div className="relative max-w-4xl max-h-full">
+            {/* Previous Button - Close to the image */}
+            {vehicle.images.length > 1 && (
+              <button
+                onClick={prevImage}
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-[34px] z-20 bg-black bg-opacity-50 text-white rounded-full p-3 hover:bg-opacity-75 transition"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+            )}
+
+            {/* Next Button - Close to the image */}
+            {vehicle.images.length > 1 && (
+              <button
+                onClick={nextImage}
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-[34px] z-20 bg-black bg-opacity-50 text-white rounded-full p-3 hover:bg-opacity-75 transition"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            )}
+
+            {/* Image with padding */}
+            <div className="p-4 max-w-full max-h-[80vh] overflow-hidden rounded-lg">
+              <img
+                src={vehicle.images[currentImageIndex]}
+                alt={`${vehicle.yearOfManufacture} ${vehicle.make} ${vehicle.model} - Image ${currentImageIndex + 1}`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Image Counter */}
+            <div className="text-center mt-4 text-white">
+              <span className="bg-black bg-opacity-50 px-3 py-1 rounded-full text-sm">
+                {currentImageIndex + 1} / {vehicle.images.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ReadyToSell />
       <Footer />
     </div>
   );
+}
+
+function toTitleCase(value: string | undefined | null) {
+  if (!value || typeof value !== 'string') return value ?? '';
+  return value
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 /* ================= HELPER ================= */

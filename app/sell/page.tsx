@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { apiClient } from '@/app/utils/api';
 
 interface ImageFile {
   file: File;
@@ -12,11 +14,11 @@ interface ImageFile {
 interface FormDataType {
   make: string;
   model: string;
-  yearOfManufacture: string;
+  yearOfManufacture: number | '';
   licensePlate: string;
   vinNumber: string;
   color: string;
-  mileage: string;
+  mileage: number | '';
   transmission: string;
   type: string;
   fuelType: string;
@@ -24,7 +26,7 @@ interface FormDataType {
   vehicleFeatures: string[];
   title: string;
   description: string;
-  price: string;
+  price: number | '';
   currency: string;
   locationCity: string;
   locationDistrict: string;
@@ -32,7 +34,39 @@ interface FormDataType {
   images: ImageFile[];
 }
 
+const COMMON_FEATURES = [
+  'Air Conditioning',
+  'Power Steering',
+  'Power Windows',
+  'Power Locks',
+  'ABS Brakes',
+  'Airbags',
+  'Cruise Control',
+  'Bluetooth',
+  'USB Ports',
+  'Backup Camera',
+  'Navigation System',
+  'Heated Seats',
+  'Leather Seats',
+  'Sunroof',
+  'Alloy Wheels',
+  'Fog Lights',
+  'Tinted Windows',
+  'Roof Rack',
+  'Tow Package',
+  'Keyless Entry',
+  'Remote Start',
+  'Original Paint',
+  'Clean Interior',
+  'No Accidents',
+  'Single Owner',
+  'Service Records',
+  'Warranty',
+  'Low Mileage'
+];
+
 export default function SellCarPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('vehicle');
   const [formData, setFormData] = useState<FormDataType>({
     // Vehicle Information
@@ -46,14 +80,14 @@ export default function SellCarPage() {
     transmission: '',
     type: '',
     fuelType: '',
-    condition: 'Used',
+    condition: 'used',
     vehicleFeatures: [],
     
     // Posting Information
     title: '',
     description: '',
     price: '',
-    currency: 'VND',
+    currency: 'USD',
     locationCity: '',
     locationDistrict: '',
     locationAddress: '',
@@ -63,29 +97,27 @@ export default function SellCarPage() {
   });
 
   const [featureInput, setFeatureInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    const numberFields = ['yearOfManufacture', 'mileage', 'price'];
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: numberFields.includes(name) ? (value === '' ? '' : parseInt(value)) : value
     }));
+    setError('');
   };
 
-  const handleAddFeature = () => {
-    if (featureInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        vehicleFeatures: [...prev.vehicleFeatures, featureInput.trim()]
-      }));
-      setFeatureInput('');
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
+  const handleFeatureChange = (feature: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      vehicleFeatures: prev.vehicleFeatures.filter((_, i) => i !== index)
+      vehicleFeatures: checked
+        ? [...prev.vehicleFeatures, feature]
+        : prev.vehicleFeatures.filter(f => f !== feature)
     }));
   };
 
@@ -110,10 +142,123 @@ export default function SellCarPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = (): boolean => {
+    if (!formData.make || !formData.model || formData.yearOfManufacture === '' || 
+        !formData.licensePlate || !formData.transmission || !formData.type || !formData.fuelType) {
+      setError('Please fill in all required vehicle information fields');
+      return false;
+    }
+
+    if (!formData.title || !formData.description || formData.price === '' || 
+        !formData.locationCity || !formData.locationDistrict) {
+      setError('Please fill in all listing information fields');
+      return false;
+    }
+
+    if (formData.images.length === 0) {
+      setError('Please upload at least one image');
+      return false;
+    }
+
+    if (!termsAccepted) {
+      setError('Please accept the terms and conditions');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // TODO: Submit to API
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Create vehicle with multipart form data (images included)
+      const formDataMultipart = new FormData();
+      
+      // Add required vehicle fields
+      formDataMultipart.append('make', formData.make);
+      formDataMultipart.append('model', formData.model);
+      formDataMultipart.append('yearOfManufacture', formData.yearOfManufacture.toString());
+      formDataMultipart.append('licensePlate', formData.licensePlate);
+      formDataMultipart.append('transmission', formData.transmission);
+      formDataMultipart.append('type', formData.type);
+      formDataMultipart.append('fuelType', formData.fuelType);
+      formDataMultipart.append('condition', formData.condition);
+      formDataMultipart.append('price', formData.price.toString());
+      
+      // Add optional fields if they have values
+      if (formData.vinNumber) {
+        formDataMultipart.append('vinNumber', formData.vinNumber);
+      }
+      if (formData.color) {
+        formDataMultipart.append('color', formData.color);
+      }
+      if (formData.mileage !== '') {
+        formDataMultipart.append('mileage', formData.mileage.toString());
+      }
+      if (formData.vehicleFeatures.length > 0) {
+        formDataMultipart.append('features', formData.vehicleFeatures.join(','));
+      }
+      
+      // Add images
+      formData.images.forEach((imageFile) => {
+        formDataMultipart.append('images', imageFile.file);
+      });
+
+      // Create vehicle with multipart form data
+      const vehicleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/vehicle`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formDataMultipart,
+      });
+
+      if (!vehicleResponse.ok) {
+        const errorData = await vehicleResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create vehicle');
+      }
+
+      const vehicleData = await vehicleResponse.json();
+      const vehicleId = vehicleData._id || vehicleData.id;
+
+      if (!vehicleId) {
+        throw new Error('No vehicle ID returned from server');
+      }
+
+      // Step 2: Create posting with vehicle ID
+      const postingData = {
+        vehicleId: vehicleId,
+        title: formData.title,
+        description: formData.description,
+        price: Number(formData.price),
+        currency: formData.currency,
+        locationCity: formData.locationCity,
+        locationDistrict: formData.locationDistrict,
+        locationAddress: formData.locationAddress,
+      };
+
+      await apiClient('/postings', {
+        method: 'POST',
+        body: postingData,
+      });
+
+      // Success - redirect to profile
+      router.push('/profile');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      console.error('Submission error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -126,6 +271,13 @@ export default function SellCarPage() {
             <h1 className="text-3xl font-bold text-gray-900">Post Your Car for Sale</h1>
             <p className="text-gray-600 mt-2">Share your vehicle information to find the ideal buyer</p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">{error}</p>
+            </div>
+          )}
 
           {/* Progress Steps */}
           <div className="mb-8">
@@ -162,25 +314,15 @@ export default function SellCarPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Make <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <input
+                      type="text"
                       name="make"
+                      placeholder="Enter vehicle make"
                       value={formData.make}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
-                    >
-                      <option value="">Select vehicle make</option>
-                      <option value="honda">Honda</option>
-                      <option value="toyota">Toyota</option>
-                      <option value="ford">Ford</option>
-                      <option value="bmw">BMW</option>
-                      <option value="mercedes">Mercedes</option>
-                      <option value="audi">Audi</option>
-                      <option value="hyundai">Hyundai</option>
-                      <option value="kia">Kia</option>
-                      <option value="mazda">Mazda</option>
-                      <option value="suzuki">Suzuki</option>
-                    </select>
+                    />
                   </div>
 
                   <div>
@@ -215,7 +357,7 @@ export default function SellCarPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      License Plate
+                      License Plate <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -224,6 +366,7 @@ export default function SellCarPage() {
                       onChange={handleInputChange}
                       placeholder="E.g. 30A1-12345"
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
                     />
                   </div>
 
@@ -306,7 +449,6 @@ export default function SellCarPage() {
                       <option value="pickup">Pickup</option>
                       <option value="hatchback">Hatchback</option>
                       <option value="mpv">MPV</option>
-                      <option value="coupe">Coupe</option>
                     </select>
                   </div>
 
@@ -340,51 +482,45 @@ export default function SellCarPage() {
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="New">New</option>
-                      <option value="Used">Used</option>
+                      <option value="new">New</option>
+                      <option value="used">Used</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Features */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
                     Key Features
                   </label>
-                  <div className="flex gap-2 mb-4">
-                    <input
-                      type="text"
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
-                      placeholder="E.g. Original paint, Clean interior"
-                      className="flex-1 px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddFeature}
-                      className="px-4 py-2 bg-[#006557] text-white rounded-lg"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.vehicleFeatures.map((feature, index) => (
-                      <div
-                        key={index}
-                        className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full"
-                      >
-                        <span>{feature}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFeature(index)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          ×
-                        </button>
-                      </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {COMMON_FEATURES.map((feature) => (
+                      <label key={feature} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.vehicleFeatures.includes(feature)}
+                          onChange={(e) => handleFeatureChange(feature, e.target.checked)}
+                          className="w-4 h-4 text-[#006557] border-gray-300 rounded focus:ring-[#006557]"
+                        />
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </label>
                     ))}
                   </div>
+                  {formData.vehicleFeatures.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600 mb-2">Selected features:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.vehicleFeatures.map((feature, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Navigation Buttons */}
@@ -464,7 +600,6 @@ export default function SellCarPage() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="VND">VND (₫)</option>
                         <option value="USD">USD ($)</option>
                       </select>
                     </div>
@@ -478,20 +613,15 @@ export default function SellCarPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           State/Province <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <input
+                          type="text"
                           name="locationCity"
+                          placeholder="Enter State/Province"
                           value={formData.locationCity}
                           onChange={handleInputChange}
                           className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
-                        >
-                          <option value="">Select State/Province</option>
-                          <option value="hanoi">Hanoi</option>
-                          <option value="hcm">Ho Chi Minh City</option>
-                          <option value="danang">Da Nang</option>
-                          <option value="haiphong">Hai Phong</option>
-                          <option value="hochiminh">HCMC</option>
-                        </select>
+                        />
                       </div>
 
                       <div>
@@ -698,7 +828,7 @@ export default function SellCarPage() {
                     <div>
                       <p className="text-gray-600">Price</p>
                       <p className="font-medium text-gray-900 text-blue-600">
-                        {formData.price ? `${parseInt(formData.price).toLocaleString()} ${formData.currency}` : '-'}
+                        {formData.price ? `${(formData.price as number).toLocaleString()} ${formData.currency}` : '-'}
                       </p>
                     </div>
                     {formData.vehicleFeatures.length > 0 && (
@@ -765,6 +895,8 @@ export default function SellCarPage() {
                     <input
                       type="checkbox"
                       id="terms"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
                       className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <label htmlFor="terms" className="text-sm text-gray-700">
@@ -784,9 +916,10 @@ export default function SellCarPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold"
+                    disabled={isLoading}
+                    className="px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Post Listing
+                    {isLoading ? 'Publishing...' : 'Post Listing'}
                   </button>
                 </div>
               </div>
