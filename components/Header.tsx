@@ -63,7 +63,7 @@ export default function Header() {
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-8 text-[#006557] font-bold">
               <Link href="/">Home</Link>
-              <Link href="/browse">Browse Cars</Link>
+              <Link href="/vehicles">Browse Cars</Link>
               <Link href="/sell">Sell Cars</Link>
               <Link href="/about">About</Link>
               <Link href="/contact">Contact</Link>
@@ -123,6 +123,20 @@ export default function Header() {
                         onClick={() => setOpen(false)}
                       >
                         View Profile
+                      </Link>
+                      <Link
+                        href="/orders"
+                        className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        onClick={() => setOpen(false)}
+                      >
+                        My Orders
+                      </Link>
+                      <Link
+                        href="/orders/seller"
+                        className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        onClick={() => setOpen(false)}
+                      >
+                        Seller Orders
                       </Link>
                       <button
                         onClick={() => {

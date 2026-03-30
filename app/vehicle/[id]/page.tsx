@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { apiClient } from '@/app/utils/api';
 import Footer from '@/components/Footer';
@@ -104,8 +104,16 @@ export default function VehicleDetailsPage() {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const router = useRouter();
+
   const handleContactSeller = (carId: number | string) => {
     alert(`Contacting seller for posting ${carId}`);
+  };
+
+  const handleBuy = () => {
+    if (id) {
+      router.push(`/vehicle/${id}/buy`);
+    }
   };
 
   const openImageViewer = (index: number) => {
@@ -331,8 +339,18 @@ export default function VehicleDetailsPage() {
                 </div>
               </div>
 
-              <button className="w-full bg-[#006557] text-white py-3 rounded-lg font-medium">
+              <button
+                onClick={() => handleContactSeller(posting.id)}
+                className="w-full bg-[#006557] text-white py-3 rounded-lg font-medium"
+              >
                 Contact Seller
+              </button>
+
+              <button
+                onClick={handleBuy}
+                className="w-full mt-3 bg-gray-600 text-white py-3 rounded-lg font-medium hover:bg-gray-700 transition"
+              >
+                Buy
               </button>
             </div>
 
