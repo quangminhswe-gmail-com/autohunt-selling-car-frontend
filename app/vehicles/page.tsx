@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
@@ -39,26 +38,22 @@ interface Posting {
 }
 
 export default function VehiclesPage() {
-  const searchParams = useSearchParams();
-
   const [postings, setPostings] = useState<Posting[]>([]);
   const [filteredPostings, setFilteredPostings] = useState<Posting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
-  const [selectedMakes, setSelectedMakes] = useState<string[]>(
-    searchParams.get('make') ? searchParams.get('make')!.split(',') : []
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [selectedMakes, setSelectedMakes] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
   const [selectedFuelTypes, setSelectedFuelTypes] = useState<string[]>([]);
   const [brandSearch, setBrandSearch] = useState('');
-  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
+  const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Collapsed states
@@ -115,6 +110,18 @@ export default function VehiclesPage() {
     };
 
     fetchPostings();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    setSearchQuery(params.get('search') || '');
+    setMinPrice(params.get('minPrice') || '');
+    setMaxPrice(params.get('maxPrice') || '');
+    setSelectedMakes(params.get('make') ? params.get('make')!.split(',').filter(Boolean) : []);
+    setSortBy(params.get('sortBy') || 'newest');
   }, []);
 
   useEffect(() => {
