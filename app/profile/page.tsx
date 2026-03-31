@@ -181,7 +181,7 @@ export default function ProfilePage() {
   const postedCarsCount = myListings.length;
 
   const canShowRating =
-    user.sellerStatus === 'approved' && postedCarsCount > 0;
+    (user.sellerStatus === 'approved' && postedCarsCount > 0) || user.rating > 0;
 
   const handleSave = async () => {
     if (!originalData) return;
@@ -322,14 +322,38 @@ export default function ProfilePage() {
                   </div>
 
                   {canShowRating && (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-yellow-400 text-lg">★</span>
-                        <span className="text-xl font-bold text-gray-900">
-                          {user.rating.toFixed(1)}
-                        </span>
+                    <div className="text-center bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
+                      <div className="flex items-center justify-center gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <svg
+                            key={i}
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className={`${
+                              i <= Math.floor(user.rating)
+                                ? 'text-yellow-400'
+                                : i - user.rating < 1
+                                ? 'text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                            style={{
+                              opacity:
+                                i <= Math.floor(user.rating) ? 1 : i - user.rating < 1 ? user.rating % 1 : 0.3,
+                            }}
+                          >
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                          </svg>
+                        ))}
                       </div>
-                      <p className="text-sm text-gray-600">Seller Rating</p>
+                      <span className="text-xl font-bold text-gray-900 block mb-1">
+                        {user.rating.toFixed(1)}
+                      </span>
+                      <p className="text-sm text-gray-600 font-medium">Seller Rating</p>
+                      <div className="mt-2 px-3 py-1 bg-white rounded-full text-xs text-gray-600 font-medium inline-block">
+                        ⭐ Trusted Seller
+                      </div>
                     </div>
                   )}
                 </div>

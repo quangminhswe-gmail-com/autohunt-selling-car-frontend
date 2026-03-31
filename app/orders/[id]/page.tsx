@@ -47,6 +47,18 @@ interface Order {
   cancelledAt?: string;
 }
 
+interface Review {
+  rating: number;
+  comment: string;
+}
+
+interface ExistingReview {
+  _id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -57,6 +69,12 @@ export default function OrderDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [newOrderStatus, setNewOrderStatus] = useState('');
   const [newDeliveryStatus, setNewDeliveryStatus] = useState('');
+  const [newPaymentStatus, setNewPaymentStatus] = useState('');
+  const [review, setReview] = useState<Review>({ rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [existingReview, setExistingReview] = useState<ExistingReview | null>(null);
 
 
   useEffect(() => {
@@ -81,6 +99,7 @@ export default function OrderDetailPage() {
         
         setNewOrderStatus(orderData.orderStatus);
         setNewDeliveryStatus(orderData.deliveryStatus);
+        setNewPaymentStatus(orderData.paymentStatus);
       } catch (err) {
         console.error('Error loading order', err);
         setError((err as Error).message || 'Failed to load order details');
@@ -94,6 +113,12 @@ export default function OrderDetailPage() {
 
   const isSeller = order?.ownerId?._id === currentUserId;
   const isBuyer = order?.customerId?._id === currentUserId;
+
+  const capitalize = (str: string) => {
+    if (!str) return '';
+    const formatted = str.replace(/_/g, ' ');
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1).toLowerCase();
+  };
 
   const handleUpdateOrderStatus = async () => {
     if (!order || !isSeller || newOrderStatus === order.orderStatus) return;
@@ -130,6 +155,58 @@ export default function OrderDetailPage() {
       setError((err as Error).message || 'Failed to update delivery status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async () => {
+    if (!order || !isSeller || newPaymentStatus === order.paymentStatus) return;
+
+    setUpdating(true);
+    try {
+      const updatedOrder = await apiClient<Order>(`/orders/${order._id}/payment-status`, {
+        method: 'PATCH',
+        body: { paymentStatus: newPaymentStatus },
+      });
+      setOrder(updatedOrder);
+      setError(null);
+    } catch (err) {
+      console.error('Error updating payment status', err);
+      setError((err as Error).message || 'Failed to update payment status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!order || !review.rating || !review.comment.trim()) {
+      setReviewError('Please provide both a rating and a comment');
+      return;
+    }
+
+    setSubmittingReview(true);
+    setReviewError(null);
+    try {
+      await apiClient('/reviews', {
+        method: 'POST',
+        body: {
+          orderId: order._id,
+          rating: review.rating,
+          comment: review.comment,
+        },
+      });
+      setReviewSubmitted(true);
+      setReview({ rating: 5, comment: '' });
+    } catch (err) {
+      const errorMsg = (err as Error).message || 'Failed to submit review';
+      // If user already reviewed this order, show success state
+      if (errorMsg.includes('Already reviewed')) {
+        setReviewSubmitted(true);
+      } else {
+        console.error('Error submitting review', err);
+        setReviewError(errorMsg);
+      }
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -271,15 +348,15 @@ export default function OrderDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Color</p>
-                    <p className="font-semibold text-gray-900">{order.vehicleId?.color}</p>
+                    <p className="font-semibold text-gray-900">{capitalize(order.vehicleId?.color || '')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Transmission</p>
-                    <p className="font-semibold text-gray-900">{order.vehicleId?.transmission}</p>
+                    <p className="font-semibold text-gray-900">{capitalize(order.vehicleId?.transmission || '')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Fuel Type</p>
-                    <p className="font-semibold text-gray-900">{order.vehicleId?.fuelType}</p>
+                    <p className="font-semibold text-gray-900">{capitalize(order.vehicleId?.fuelType || '')}</p>
                   </div>
                 </div>
               </div>
@@ -325,20 +402,20 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm text-gray-600">Agreed Price</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ₫{order.agreedPrice?.toLocaleString('vi-VN')}
+                    ${order.agreedPrice?.toLocaleString('en-US')}
                   </p>
                 </div>
                 {order.depositAmount > 0 && (
                   <div>
                     <p className="text-sm text-gray-600">Deposit</p>
                     <p className="font-semibold text-gray-900">
-                      ₫{order.depositAmount?.toLocaleString('vi-VN')}
+                      ${order.depositAmount?.toLocaleString('en-US')}
                     </p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-gray-600">Payment Method</p>
-                  <p className="font-semibold text-gray-900">{order.paymentMethod}</p>
+                  <p className="font-semibold text-gray-900">{capitalize(order.paymentMethod || '')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Payment Status</p>
@@ -361,6 +438,85 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Review Section - Only show for buyers when order is completed */}
+            {isBuyer && !isSeller && order.orderStatus === 'completed' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                {reviewSubmitted ? (
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">✓</div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Review Submitted</h3>
+                    <p className="text-gray-600 text-sm">
+                      Thank you for reviewing the seller. Your review has been submitted successfully.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Review the Seller</h2>
+                    
+                    {reviewError && (
+                      <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-red-800 text-sm">{reviewError}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {/* Rating */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Rating *
+                        </label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={() => setReview({ ...review, rating: star })}
+                              className={`text-3xl transition ${
+                                review.rating >= star
+                                  ? 'text-yellow-400 hover:text-yellow-500'
+                                  : 'text-gray-300 hover:text-yellow-300'
+                              }`}
+                              disabled={submittingReview}
+                            >
+                              ★
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {review.rating} out of 5 stars
+                        </p>
+                      </div>
+
+                      {/* Comment */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Comments *
+                        </label>
+                        <textarea
+                          value={review.comment}
+                          onChange={(e) =>
+                            setReview({ ...review, comment: e.target.value })
+                          }
+                          placeholder="Share your experience with this seller..."
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          rows={4}
+                          disabled={submittingReview}
+                        />
+                      </div>
+
+                      {/* Submit Button */}
+                      <button
+                        onClick={handleSubmitReview}
+                        disabled={submittingReview || !review.rating || !review.comment.trim()}
+                        className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition"
+                      >
+                        {submittingReview ? 'Submitting...' : 'Submit Review'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Seller Update Controls */}
             {isSeller && (
@@ -412,6 +568,30 @@ export default function OrderDetailPage() {
                       className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition"
                     >
                       {updating ? 'Updating...' : 'Update Delivery'}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Payment Status
+                    </label>
+                    <select
+                      value={newPaymentStatus}
+                      onChange={(e) => setNewPaymentStatus(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={updating}
+                    >
+                      <option value="unpaid">Unpaid</option>
+                      <option value="partially_paid">Partially Paid</option>
+                      <option value="paid">Paid</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                    <button
+                      onClick={handleUpdatePaymentStatus}
+                      disabled={updating || newPaymentStatus === order.paymentStatus}
+                      className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition"
+                    >
+                      {updating ? 'Updating...' : 'Update Payment'}
                     </button>
                   </div>
                 </div>

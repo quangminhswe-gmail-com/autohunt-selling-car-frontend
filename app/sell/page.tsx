@@ -314,15 +314,67 @@ export default function SellCarPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Make <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="make"
-                      placeholder="Enter vehicle make"
                       value={formData.make}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
-                    />
+                    >
+                      <option value="">Select vehicle make</option>
+                      <option value="Acura">Acura</option>
+                      <option value="Alfa Romeo">Alfa Romeo</option>
+                      <option value="Aston Martin">Aston Martin</option>
+                      <option value="Audi">Audi</option>
+                      <option value="Bentley">Bentley</option>
+                      <option value="BMW">BMW</option>
+                      <option value="Buick">Buick</option>
+                      <option value="BYD">BYD</option>
+                      <option value="Cadillac">Cadillac</option>
+                      <option value="Chevrolet">Chevrolet</option>
+                      <option value="Chrysler">Chrysler</option>
+                      <option value="Citroën">Citroën</option>
+                      <option value="Dodge">Dodge</option>
+                      <option value="Ferrari">Ferrari</option>
+                      <option value="Fiat">Fiat</option>
+                      <option value="Ford">Ford</option>
+                      <option value="Geely">Geely</option>
+                      <option value="Genesis">Genesis</option>
+                      <option value="GMC">GMC</option>
+                      <option value="Great Wall">Great Wall</option>
+                      <option value="Honda">Honda</option>
+                      <option value="Hyundai">Hyundai</option>
+                      <option value="Infiniti">Infiniti</option>
+                      <option value="Isuzu">Isuzu</option>
+                      <option value="Jaguar">Jaguar</option>
+                      <option value="Jeep">Jeep</option>
+                      <option value="Kia">Kia</option>
+                      <option value="Lamborghini">Lamborghini</option>
+                      <option value="Land Rover">Land Rover</option>
+                      <option value="Lexus">Lexus</option>
+                      <option value="Lincoln">Lincoln</option>
+                      <option value="Lucid">Lucid</option>
+                      <option value="Maserati">Maserati</option>
+                      <option value="Mazda">Mazda</option>
+                      <option value="McLaren">McLaren</option>
+                      <option value="Mercedes-Benz">Mercedes-Benz</option>
+                      <option value="Mitsubishi">Mitsubishi</option>
+                      <option value="NIO">NIO</option>
+                      <option value="Nissan">Nissan</option>
+                      <option value="Peugeot">Peugeot</option>
+                      <option value="Polestar">Polestar</option>
+                      <option value="Porsche">Porsche</option>
+                      <option value="Ram">Ram</option>
+                      <option value="Renault">Renault</option>
+                      <option value="Rivian">Rivian</option>
+                      <option value="Rolls-Royce">Rolls-Royce</option>
+                      <option value="Subaru">Subaru</option>
+                      <option value="Suzuki">Suzuki</option>
+                      <option value="Tesla">Tesla</option>
+                      <option value="Toyota">Toyota</option>
+                      <option value="Volkswagen">Volkswagen</option>
+                      <option value="Volvo">Volvo</option>
+                    </select>
                   </div>
 
                   <div>
@@ -426,9 +478,12 @@ export default function SellCarPage() {
                       required
                     >
                       <option value="">Select transmission type</option>
-                      <option value="manual">Manual</option>
                       <option value="automatic">Automatic</option>
+                      <option value="manual">Manual</option>
                       <option value="cvt">CVT</option>
+                      <option value="dual-clutch">Dual-Clutch</option>
+                      <option value="semi-automatic">Semi-Automatic</option>
+                      <option value="amt">AMT</option>
                     </select>
                   </div>
 
@@ -446,9 +501,21 @@ export default function SellCarPage() {
                       <option value="">Select vehicle type</option>
                       <option value="sedan">Sedan</option>
                       <option value="suv">SUV</option>
-                      <option value="pickup">Pickup</option>
                       <option value="hatchback">Hatchback</option>
-                      <option value="mpv">MPV</option>
+                      <option value="coupe">Coupe</option>
+                      <option value="convertible">Convertible</option>
+                      <option value="wagon">Wagon</option>
+                      <option value="pickup truck">Pickup Truck</option>
+                      <option value="minivan">Minivan</option>
+                      <option value="crossover">Crossover</option>
+                      <option value="roadster">Roadster</option>
+                      <option value="van">Van</option>
+                      <option value="luxury sedan">Luxury Sedan</option>
+                      <option value="sports car">Sports Car</option>
+                      <option value="compact car">Compact Car</option>
+                      <option value="midsize car">Midsize Car</option>
+                      <option value="full-size car">Full-size Car</option>
+                      <option value="subcompact car">Subcompact Car</option>
                     </select>
                   </div>
 
@@ -464,10 +531,14 @@ export default function SellCarPage() {
                       required
                     >
                       <option value="">Select fuel type</option>
-                      <option value="petrol">Petrol</option>
+                      <option value="gasoline">Gasoline</option>
                       <option value="diesel">Diesel</option>
-                      <option value="hybrid">Hybrid</option>
                       <option value="electric">Electric</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="plug-in hybrid">Plug-in Hybrid</option>
+                      <option value="cng">CNG</option>
+                      <option value="lpg">LPG</option>
+                      <option value="hydrogen">Hydrogen</option>
                     </select>
                   </div>
 

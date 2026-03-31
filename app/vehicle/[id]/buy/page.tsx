@@ -27,6 +27,15 @@ interface Posting {
   locationDistrict?: string;
   locationAddress?: string;
   vehicle: Vehicle;
+  ownerId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl?: string;
+    rating: number;
+    totalPostings: number;
+  };
   status: string;
 }
 
