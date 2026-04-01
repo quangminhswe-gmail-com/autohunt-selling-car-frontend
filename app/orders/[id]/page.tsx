@@ -111,8 +111,14 @@ export default function OrderDetailPage() {
     loadData();
   }, [id, router]);
 
-  const isSeller = order?.ownerId?._id === currentUserId;
-  const isBuyer = order?.customerId?._id === currentUserId;
+  const getEntityId = (entity: any) => {
+    if (!entity) return null;
+    if (typeof entity === 'string') return entity;
+    return entity._id?.toString?.() || entity.id?.toString?.();
+  };
+
+  const isSeller = getEntityId(order?.ownerId) === currentUserId;
+  const isBuyer = getEntityId(order?.customerId) === currentUserId;
 
   const capitalize = (str: string) => {
     if (!str) return '';
@@ -125,11 +131,16 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      const updatedOrder = await apiClient<Order>(`/orders/${order._id}/status`, {
+      await apiClient<Order>(`/orders/${order._id}/status`, {
         method: 'PATCH',
         body: { orderStatus: newOrderStatus },
       });
+      // Re-fetch the order to get updated populated data
+      const updatedOrder = await apiClient<Order>(`/orders/${order._id}`);
       setOrder(updatedOrder);
+      setNewOrderStatus(updatedOrder.orderStatus || '');
+      setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
+      setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
     } catch (err) {
       console.error('Error updating order status', err);
@@ -144,11 +155,16 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      const updatedOrder = await apiClient<Order>(`/orders/${order._id}/delivery-status`, {
+      await apiClient<Order>(`/orders/${order._id}/delivery-status`, {
         method: 'PATCH',
         body: { deliveryStatus: newDeliveryStatus },
       });
+      // Re-fetch the order to get updated populated data
+      const updatedOrder = await apiClient<Order>(`/orders/${order._id}`);
       setOrder(updatedOrder);
+      setNewOrderStatus(updatedOrder.orderStatus || '');
+      setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
+      setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
     } catch (err) {
       console.error('Error updating delivery status', err);
@@ -163,11 +179,16 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      const updatedOrder = await apiClient<Order>(`/orders/${order._id}/payment-status`, {
+      await apiClient<Order>(`/orders/${order._id}/payment-status`, {
         method: 'PATCH',
         body: { paymentStatus: newPaymentStatus },
       });
+      // Re-fetch the order to get updated populated data
+      const updatedOrder = await apiClient<Order>(`/orders/${order._id}`);
       setOrder(updatedOrder);
+      setNewOrderStatus(updatedOrder.orderStatus || '');
+      setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
+      setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
     } catch (err) {
       console.error('Error updating payment status', err);

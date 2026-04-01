@@ -39,6 +39,7 @@ type Posting = {
   locationCity: string;
   locationDistrict: string;
   locationAddress: string;
+  status: 'draft' | 'pending_approval' | 'active' | 'reserved' | 'sold' | 'expired' | 'hidden' | 'blocked';
   vehicle: {
     id?: string;
     _id?: string;
@@ -171,6 +172,27 @@ export default function ProfilePage() {
     // Fetch listings on initial page load so postedCarsCount is accurate immediately.
     fetchMyListings();
   }, []);
+
+  const markPostingAsSold = async (postingId: string) => {
+    try {
+      await apiClient(`/postings/${postingId}`, {
+        method: 'PATCH',
+        body: { status: 'sold' },
+      });
+      // Update the local state to reflect the change
+      setMyListings((prevListings) =>
+        prevListings.map((posting) =>
+          posting._id === postingId || posting.id === postingId
+            ? { ...posting, status: 'sold' as const }
+            : posting
+        )
+      );
+      alert('Listing marked as sold!');
+    } catch (error) {
+      console.error('Failed to mark listing as sold:', error);
+      alert('Failed to mark listing as sold.');
+    }
+  };
 
 
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -532,7 +554,7 @@ export default function ProfilePage() {
 
                         return (
                           <div key={postingId ?? posting._id ?? posting.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                            <Link href={`/vehicle/${postingId}`} className="block">
+                            <Link href={`/vehicle/${postingId}`} className="block relative">
                               <div className="h-40 bg-gray-100">
                                 {imageSrc ? (
                                   <img
@@ -546,6 +568,13 @@ export default function ProfilePage() {
                                   </div>
                                 )}
                               </div>
+                              {posting.status === 'sold' && (
+                                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                                  <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg">
+                                    SOLD
+                                  </div>
+                                </div>
+                              )}
                             </Link>
 
                             <div className="p-4 space-y-2 flex-1 flex flex-col">
@@ -582,14 +611,28 @@ export default function ProfilePage() {
 
                               <div className="mt-auto pt-2">
                                 <div className="flex gap-2">
-                                  {vehicle ? (
+                                  {vehicle && posting.status !== 'sold' ? (
                                     <Link href={`/profile/vehicle/${vehicleId}/edit`} className="flex-1">
                                       <button className="w-full border text-black rounded-md py-2 text-sm hover:bg-gray-50">Edit</button>
                                     </Link>
                                   ) : (
                                     <button className="flex-1 border text-gray-400 rounded-md py-2 text-sm cursor-not-allowed" disabled>Edit</button>
                                   )}
-                                  <button className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]">Mark Sold</button>
+                                  {posting.status !== 'sold' ? (
+                                    <button
+                                      onClick={() => markPostingAsSold(postingId ?? posting._id!)}
+                                      className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]"
+                                    >
+                                      Mark Sold
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="flex-1 bg-gray-400 text-white rounded-md py-2 text-sm cursor-not-allowed"
+                                      disabled
+                                    >
+                                      Sold
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>

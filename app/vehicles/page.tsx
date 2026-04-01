@@ -444,9 +444,9 @@ export default function VehiclesPage() {
                           onChange={(e) => setSelectedYear(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black text-sm"
                         />
-                        <p className="text-xs text-gray-500">
+                        {/* <p className="text-xs text-gray-500">
                           {allYears.length} available years in inventory. Use exact year to filter.
-                        </p>
+                        </p> */}
                       </div>
                     )}
                   </div>
