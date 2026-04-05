@@ -6,14 +6,15 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notifications';
 
 interface Order {
   _id: string;
-  postingId: {
+  postingId?: {
     _id: string;
     title: string;
     status: string;
-  };
+  } | null;
   vehicleId: {
     _id: string;
     make: string;
@@ -142,9 +143,17 @@ export default function OrderDetailPage() {
       setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
       setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
+      showSuccessNotification(
+        'Order Status Updated!',
+        `Order status has been changed to ${capitalize(newOrderStatus)}.`
+      );
     } catch (err) {
       console.error('Error updating order status', err);
       setError((err as Error).message || 'Failed to update order status');
+      showErrorNotification(
+        'Failed to Update Order Status',
+        (err as Error).message || 'Failed to update order status'
+      );
     } finally {
       setUpdating(false);
     }
@@ -166,9 +175,17 @@ export default function OrderDetailPage() {
       setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
       setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
+      showSuccessNotification(
+        'Delivery Status Updated!',
+        `Delivery status has been changed to ${capitalize(newDeliveryStatus)}.`
+      );
     } catch (err) {
       console.error('Error updating delivery status', err);
       setError((err as Error).message || 'Failed to update delivery status');
+      showErrorNotification(
+        'Failed to Update Delivery Status',
+        (err as Error).message || 'Failed to update delivery status'
+      );
     } finally {
       setUpdating(false);
     }
@@ -190,9 +207,17 @@ export default function OrderDetailPage() {
       setNewDeliveryStatus(updatedOrder.deliveryStatus || '');
       setNewPaymentStatus(updatedOrder.paymentStatus || '');
       setError(null);
+      showSuccessNotification(
+        'Payment Status Updated!',
+        `Payment status has been changed to ${capitalize(newPaymentStatus)}.`
+      );
     } catch (err) {
       console.error('Error updating payment status', err);
       setError((err as Error).message || 'Failed to update payment status');
+      showErrorNotification(
+        'Failed to Update Payment Status',
+        (err as Error).message || 'Failed to update payment status'
+      );
     } finally {
       setUpdating(false);
     }
@@ -217,6 +242,10 @@ export default function OrderDetailPage() {
       });
       setReviewSubmitted(true);
       setReview({ rating: 5, comment: '' });
+      showSuccessNotification(
+        'Review Submitted!',
+        'Thank you for your feedback. Your review has been posted.'
+      );
     } catch (err) {
       const errorMsg = (err as Error).message || 'Failed to submit review';
       // If user already reviewed this order, show success state
@@ -225,6 +254,10 @@ export default function OrderDetailPage() {
       } else {
         console.error('Error submitting review', err);
         setReviewError(errorMsg);
+        showErrorNotification(
+          'Failed to Submit Review',
+          errorMsg
+        );
       }
     } finally {
       setSubmittingReview(false);
@@ -389,11 +422,13 @@ export default function OrderDetailPage() {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600">Title</p>
-                  <p className="font-semibold text-gray-900">{order.postingId?.title}</p>
+                  <p className="font-semibold text-gray-900">
+                    {order.postingId?.title || `${order.vehicleId.make} ${order.vehicleId.model}`}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
-                  {getStatusBadge(order.postingId?.status || 'active', 'order')}
+                  {getStatusBadge(order.postingId?.status || 'removed', 'order')}
                 </div>
               </div>
             </div>

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notifications';
 
 interface ImageFile {
   file?: File;
@@ -325,11 +326,20 @@ export default function EditVehiclePage() {
         }
       }
 
-      alert('Listing updated successfully.');
-      router.push('/profile');
+      showSuccessNotification(
+        'Listing Updated Successfully!',
+        'Your vehicle listing has been updated and is now live.'
+      );
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
       setError(message);
+      showErrorNotification(
+        'Failed to Update Listing',
+        message
+      );
       console.error('Update error:', err);
     } finally {
       setIsLoading(false);
@@ -348,12 +358,21 @@ export default function EditVehiclePage() {
     try {
       setLoading(true);
       await apiClient(`/postings/${postingId}`, { method: 'DELETE' });
-      alert('Listing deleted successfully.');
-      router.push('/profile');
+      showSuccessNotification(
+        'Listing Deleted Successfully!',
+        'Your vehicle listing has been removed from the marketplace.'
+      );
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
     } catch (err) {
       console.error('Failed to delete posting:', err);
       const errMsg = err instanceof Error ? err.message : 'Failed to delete listing.';
-      alert(errMsg || 'Failed to delete listing.');
+      setError(errMsg);
+      showErrorNotification(
+        'Failed to Delete Listing',
+        errMsg
+      );
     } finally {
       setLoading(false);
     }

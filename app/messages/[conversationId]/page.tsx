@@ -1,183 +1,292 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { useParams, useRouter } from 'next/navigation';
 import ChatLayout from '@/components/chat/ChatLayout';
 import ConversationList from '@/components/chat/ConversationList';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatWindow from '@/components/chat/ChatWindow';
 import MessageInput from '@/components/chat/MessageInput';
+import { apiClient } from '@/app/utils/api';
 
-// Mock data
-const mockConversations = [
-  {
-    id: "1",
-    name: "Nguyen Van A",
-    avatar: "/avatar1.jpg",
-    lastMessage: "Is the car still available?",
-    time: "10:20 AM",
-    unreadCount: 2,
-    isOnline: true
-  },
-  {
-    id: "2",
-    name: "Tran Minh B",
-    avatar: "/avatar2.jpg",
-    lastMessage: "Can we negotiate the price?",
-    time: "Yesterday",
-    unreadCount: 0,
-    isOnline: false
-  },
-  {
-    id: "3",
-    name: "Le Thi C",
-    avatar: "/avatar3.jpg",
-    lastMessage: "When can we meet to see the car?",
-    time: "2 days ago",
-    unreadCount: 1,
-    isOnline: true
+interface Participant {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  email: string;
+}
+
+interface ConversationResponse {
+  _id: string;
+  participants: Participant[];
+  lastMessage?: string;
+  updatedAt?: string;
+}
+
+interface MessageResponse {
+  _id: string;
+  senderId: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  };
+  content: string;
+  createdAt: string;
+}
+
+interface UIConversation {
+  id: string;
+  name: string;
+  avatar?: string;
+  lastMessage: string;
+  time: string;
+  unreadCount?: number;
+  isOnline?: boolean;
+}
+
+interface UIMessage {
+  id: string | number;
+  sender: 'buyer' | 'seller';
+  text: string;
+  time: string;
+}
+
+const getCurrentUserId = () => {
+  if (typeof window === 'undefined') return null;
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub || payload.id || null;
+  } catch {
+    return null;
   }
-];
-
-const mockMessagesData: Record<string, any[]> = {
-  "1": [
-    {
-      id: 1,
-      sender: "buyer",
-      text: "Hello, is the car still available?",
-      time: "10:00 AM"
-    },
-    {
-      id: 2,
-      sender: "seller",
-      text: "Yes it is still available.",
-      time: "10:02 AM"
-    },
-    {
-      id: 3,
-      sender: "buyer",
-      text: "Great! Can you tell me more about its condition?",
-      time: "10:05 AM"
-    },
-    {
-      id: 4,
-      sender: "seller",
-      text: "The car is in excellent condition. It has only 25,000 km on it and has been well maintained.",
-      time: "10:08 AM"
-    }
-  ],
-  "2": [
-    {
-      id: 1,
-      sender: "buyer",
-      text: "Hi, I saw your Toyota Camry listing. Can we negotiate the price?",
-      time: "Yesterday 2:30 PM"
-    },
-    {
-      id: 2,
-      sender: "seller",
-      text: "Hello! The price is already quite competitive. What price were you thinking?",
-      time: "Yesterday 2:35 PM"
-    }
-  ],
-  "3": [
-    {
-      id: 1,
-      sender: "buyer",
-      text: "Hello, when can we meet to see the car?",
-      time: "2 days ago 9:00 AM"
-    }
-  ]
 };
+
+const formatTime = (iso?: string) => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const getParticipantName = (participant?: Participant) => {
+  if (!participant) return 'Unknown';
+
+  const fullName = [participant.firstName, participant.lastName].filter(Boolean).join(' ').trim();
+  if (fullName) return fullName;
+  if (participant.fullName) return participant.fullName;
+  if (participant.email) return participant.email;
+  return participant._id || 'Unknown';
+};
+
+const mapConversation = (conversation: ConversationResponse, userId: string | null): UIConversation => {
+  const otherParticipant =
+    conversation.participants.find((participant) => participant._id?.toString() !== userId) ||
+    conversation.participants[0];
+  const name = getParticipantName(otherParticipant);
+
+  return {
+    id: conversation._id,
+    name,
+    avatar: undefined,
+    lastMessage: conversation.lastMessage || 'No messages yet',
+    time: formatTime(conversation.updatedAt),
+    unreadCount: 0,
+    isOnline: false,
+  };
+};
+
+const mapMessage = (message: MessageResponse, currentUserId: string | null): UIMessage => ({
+  id: message._id,
+  sender: message.senderId._id === currentUserId ? 'buyer' : 'seller',
+  text: message.content,
+  time: formatTime(message.createdAt),
+});
 
 export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
   const conversationId = params.conversationId as string;
+  const [conversations, setConversations] = useState<UIConversation[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socketError, setSocketError] = useState<string | null>(null);
 
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState(conversationId);
-
-  const currentConversation = mockConversations.find(c => c.id === conversationId);
+  const userId = getCurrentUserId();
+  const displayError = socketError || error;
 
   useEffect(() => {
-    if (conversationId && mockMessagesData[conversationId]) {
-      setMessages(mockMessagesData[conversationId]);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token || !userId) {
+      router.push('/login');
+      return;
     }
-  }, [conversationId]);
+
+    const loadConversations = async () => {
+      setLoadingConversations(true);
+      setError(null);
+
+      try {
+        const data = await apiClient<ConversationResponse[]>('/chat/conversations');
+        setConversations(data.map((conversation) => mapConversation(conversation, userId)));
+      } catch (err) {
+        console.error('Failed to load conversations', err);
+        setError((err as Error).message || 'Unable to load conversations');
+      } finally {
+        setLoadingConversations(false);
+      }
+    };
+
+    loadConversations();
+  }, [router, userId]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    if (!userId) {
+      router.push('/login');
+      return;
+    }
+
+    const loadMessages = async () => {
+      setLoadingMessages(true);
+      setError(null);
+
+      try {
+        const data = await apiClient<MessageResponse[]>(`/chat/${conversationId}/messages`);
+        setMessages(data.map((message) => mapMessage(message, userId)));
+      } catch (err) {
+        console.error('Failed to load messages', err);
+        setError((err as Error).message || 'Unable to load messages');
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    loadMessages();
+  }, [conversationId, router, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const client = io(baseUrl, {
+      transports: ['websocket'],
+    });
+
+    client.on('connect', () => {
+      setSocketError(null);
+      if (conversationId) {
+        client.emit('joinRoom', conversationId);
+      }
+    });
+
+    client.on('connect_error', (err) => {
+      setSocketError(err?.message || 'Real-time connection failed');
+    });
+
+    client.on('receiveMessage', (message: any) => {
+      if (String(message.conversationId) !== conversationId) return;
+
+      setMessages((prev) => {
+        if (prev.some((msg) => String(msg.id) === String(message._id))) {
+          return prev;
+        }
+        return [...prev, mapMessage(message, userId)];
+      });
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, lastMessage: message.content, time: formatTime(message.createdAt) }
+            : conversation,
+        ),
+      );
+    });
+
+    setSocket(client);
+
+    return () => {
+      client.disconnect();
+      setSocket(null);
+    };
+  }, [userId, conversationId]);
 
   const handleConversationSelect = (id: string) => {
-    setActiveConversationId(id);
     router.push(`/messages/${id}`);
   };
 
-  const handleSendMessage = (text: string) => {
-    const newMessage = {
-      id: messages.length + 1,
-      sender: "buyer" as const,
-      text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+  const handleSendMessage = async (text: string) => {
+    if (!conversationId || !socket || !userId) {
+      setError('Unable to send message, real-time connection unavailable.');
+      return;
+    }
 
-    setMessages(prev => [...prev, newMessage]);
+    if (!socket.connected) {
+      setError('Real-time connection is not ready yet.');
+      return;
+    }
 
-    // Simulate seller typing and response
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const sellerResponse = {
-        id: messages.length + 2,
-        sender: "seller" as const,
-        text: "Thanks for your message! I'll get back to you soon.",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, sellerResponse]);
-    }, 2000);
+    setSending(true);
+    setError(null);
+
+    try {
+      socket.emit('sendMessage', {
+        conversationId,
+        senderId: userId,
+        content: text,
+      });
+    } catch (err) {
+      console.error('Failed to send message', err);
+      setError((err as Error).message || 'Unable to send message');
+    } finally {
+      setSending(false);
+    }
   };
 
-  if (!currentConversation) {
-    return (
-      <ChatLayout>
-        <ConversationList
-          conversations={mockConversations}
-          activeConversationId={activeConversationId}
-          onConversationSelect={handleConversationSelect}
-        />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Conversation not found</h3>
-            <p className="text-gray-500">The conversation you're looking for doesn't exist.</p>
-          </div>
-        </div>
-      </ChatLayout>
-    );
-  }
+  const activeConversation = conversations.find((conv) => conv.id === conversationId);
 
   return (
     <ChatLayout>
       <ConversationList
-        conversations={mockConversations}
-        activeConversationId={activeConversationId}
+        conversations={conversations}
+        activeConversationId={conversationId}
         onConversationSelect={handleConversationSelect}
       />
 
-      <div className="flex-1 flex flex-col">
-        <ChatHeader
-          name={currentConversation.name}
-          avatar={currentConversation.avatar}
-          isOnline={currentConversation.isOnline}
-        />
+      <div className="flex-1 flex flex-col bg-gray-50">
+        {activeConversation ? (
+          <>
+            <ChatHeader
+              name={activeConversation.name}
+              avatar={activeConversation.avatar}
+              isOnline={activeConversation.isOnline}
+            />
 
-        <ChatWindow
-          messages={messages}
-          isTyping={isTyping}
-        />
+            {loadingMessages ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">Loading messages...</div>
+            ) : displayError ? (
+              <div className="flex-1 p-6 text-red-700">{displayError}</div>
+            ) : (
+              <ChatWindow messages={messages} isTyping={sending} />
+            )}
 
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          disabled={isTyping}
-        />
+            <MessageInput onSendMessage={handleSendMessage} disabled={sending} />
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50 px-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Conversation not found</h3>
+              <p className="text-gray-500">Please select a valid conversation from the list.</p>
+            </div>
+          </div>
+        )}
       </div>
     </ChatLayout>
   );

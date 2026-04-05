@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification } from '@/utils/notifications';
 
 interface Vehicle {
   id: string;
@@ -84,6 +85,11 @@ export default function VehicleBuyPage() {
       return;
     }
 
+    if (posting.status !== 'active') {
+      setError('This vehicle is no longer available for purchase.');
+      return;
+    }
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
       setError('Please log in to complete the purchase.');
@@ -123,9 +129,13 @@ export default function VehicleBuyPage() {
         },
       });
 
-      setSuccess('Order created successfully. Redirecting to profile...');
+      showSuccessNotification(
+        'Purchase Order Created!',
+        'Your purchase order has been submitted successfully. The seller will be notified.'
+      );
+      setSuccess('Order created successfully. Redirecting to orders...');
       setTimeout(() => {
-        router.push('/profile');
+        router.push('/orders');
       }, 1300);
 
       console.log('Order created', order);
@@ -149,6 +159,27 @@ export default function VehicleBuyPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-sm text-red-500">Posting not found.</p>
+      </div>
+    );
+  }
+
+  if (posting.status !== 'active') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-5xl mx-auto px-4 py-10 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Vehicle Not Available</h1>
+            <p className="text-gray-600 mb-6">This vehicle is no longer available for purchase.</p>
+            <Link
+              href="/vehicles"
+              className="inline-block px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold hover:bg-[#005447] transition"
+            >
+              Browse Other Vehicles
+            </Link>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -222,7 +253,7 @@ export default function VehicleBuyPage() {
                   >
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank transfer</option>
-                    <option value="escrow">Escrow</option>
+                    {/* <option value="escrow">Escrow</option> */}
                   </select>
                 </div>
 
@@ -254,4 +285,4 @@ export default function VehicleBuyPage() {
       <Footer />
     </div>
   );
-}
+} 

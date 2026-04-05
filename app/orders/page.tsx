@@ -9,10 +9,10 @@ import { apiClient } from '@/app/utils/api';
 
 interface Order {
   _id: string;
-  postingId: {
+  postingId?: {
     title: string;
     status: string;
-  };
+  } | null;
   vehicleId: {
     make: string;
     model: string;
@@ -187,7 +187,7 @@ export default function OrdersPage() {
                           {order.vehicleId.make} {order.vehicleId.model}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          {order.postingId.title}
+                          {order.postingId?.title || `${order.vehicleId.make} ${order.vehicleId.model}`}
                         </p>
                         <div className="mt-2 text-sm">
                           <p className="text-gray-700">

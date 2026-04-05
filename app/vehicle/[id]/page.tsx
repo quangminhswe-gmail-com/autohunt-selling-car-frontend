@@ -167,8 +167,33 @@ export default function VehicleDetailsPage() {
 
   const router = useRouter();
 
-  const handleContactSeller = (carId: number | string) => {
-    alert(`Contacting seller for posting ${carId}`);
+  const handleContactSeller = async (carId: number | string) => {
+    if (!posting?.ownerId?._id) {
+      alert('Seller information is unavailable.');
+      return;
+    }
+
+    const shouldStart = window.confirm(
+      'Do you want to start a conversation with the seller?'
+    );
+
+    if (!shouldStart) {
+      return;
+    }
+
+    try {
+      const conversation = await apiClient<{ _id: string }>('/chat/start', {
+        method: 'POST',
+        body: {
+          targetUserId: posting.ownerId._id,
+        },
+      });
+
+      window.location.href = `/messages/${conversation._id}`;
+    } catch (err) {
+      console.error('Unable to start conversation', err);
+      alert('Unable to start the conversation. Please try again later.');
+    }
   };
 
   const handleBuy = () => {

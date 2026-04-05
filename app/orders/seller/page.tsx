@@ -9,7 +9,7 @@ import { apiClient } from '@/app/utils/api';
 
 interface Order {
   _id: string;
-  postingId: { title: string; status: string };
+  postingId?: { title: string; status: string } | null;
   vehicleId: { make: string; model: string; images: string[]; price: number };
   ownerId: { _id: string; email: string };
   agreedPrice: number;
@@ -142,7 +142,9 @@ export default function SellerOrdersPage() {
                       <h3 className="text-xl font-bold text-gray-900">
                         {order.vehicleId.make} {order.vehicleId.model}
                       </h3>
-                      <p className="text-sm text-gray-600">{order.postingId.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {order.postingId?.title || `${order.vehicleId.make} ${order.vehicleId.model}`}
+                      </p>
                       <p className="text-sm mt-2 text-gray-700">
                         Buyer order: ${order.agreedPrice.toLocaleString()} | Deposit: ${order.depositAmount.toLocaleString()}
                       </p>

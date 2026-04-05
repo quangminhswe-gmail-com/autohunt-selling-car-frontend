@@ -68,6 +68,7 @@ export default function Header() {
               <Link href="/sell">Sell Cars</Link>
               <Link href="/about">About</Link>
               <Link href="/contact">Contact</Link>
+              <Link href="/support">Support</Link>
             </nav>
 
             <div className="hidden md:block h-6 w-px bg-gray-300" />
@@ -147,6 +148,13 @@ export default function Header() {
                         onClick={() => setOpen(false)}
                       >
                         Seller Orders
+                      </Link>
+                      <Link
+                        href="/support/requests"
+                        className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        onClick={() => setOpen(false)}
+                      >
+                        My Support Requests
                       </Link>
                       <button
                         onClick={() => {

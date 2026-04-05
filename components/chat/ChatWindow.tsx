@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 
 interface Message {
-  id: number;
+  id: string | number;
   sender: 'buyer' | 'seller';
   text: string;
   time: string;

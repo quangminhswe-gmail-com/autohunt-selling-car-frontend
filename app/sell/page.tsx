@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification } from '@/utils/notifications';
 
 interface ImageFile {
   file: File;
@@ -250,8 +251,14 @@ export default function SellCarPage() {
         body: postingData,
       });
 
-      // Success - redirect to profile
-      router.push('/profile');
+      // Success - show notification and redirect to profile
+      showSuccessNotification(
+        'Car Listed Successfully!',
+        'Your vehicle has been posted for sale. You can view and manage it from your profile.'
+      );
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
       setError(message);

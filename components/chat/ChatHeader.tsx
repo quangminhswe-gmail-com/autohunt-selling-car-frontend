@@ -1,6 +1,6 @@
 'use client';
 
-import { UserIcon, PhoneIcon, VideoIcon, MoreHorizontalIcon } from '@/components/icons/Icons';
+import { UserIcon, MoreHorizontalIcon } from '@/components/icons/Icons';
 
 interface ChatHeaderProps {
   name: string;
@@ -37,12 +37,6 @@ export default function ChatHeader({ name, avatar, isOnline = false }: ChatHeade
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <PhoneIcon className="w-5 h-5 text-gray-600" />
-        </button>
-        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <VideoIcon className="w-5 h-5 text-gray-600" />
-        </button>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <MoreHorizontalIcon className="w-5 h-5 text-gray-600" />
         </button>
