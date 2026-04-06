@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notifications';
 
 interface ImageFile {
   file?: File;
@@ -325,11 +326,20 @@ export default function EditVehiclePage() {
         }
       }
 
-      alert('Listing updated successfully.');
-      router.push('/profile');
+      showSuccessNotification(
+        'Listing Updated Successfully!',
+        'Your vehicle listing has been updated and is now live.'
+      );
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
       setError(message);
+      showErrorNotification(
+        'Failed to Update Listing',
+        message
+      );
       console.error('Update error:', err);
     } finally {
       setIsLoading(false);
@@ -348,12 +358,21 @@ export default function EditVehiclePage() {
     try {
       setLoading(true);
       await apiClient(`/postings/${postingId}`, { method: 'DELETE' });
-      alert('Listing deleted successfully.');
-      router.push('/profile');
+      showSuccessNotification(
+        'Listing Deleted Successfully!',
+        'Your vehicle listing has been removed from the marketplace.'
+      );
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
     } catch (err) {
       console.error('Failed to delete posting:', err);
       const errMsg = err instanceof Error ? err.message : 'Failed to delete listing.';
-      alert(errMsg || 'Failed to delete listing.');
+      setError(errMsg);
+      showErrorNotification(
+        'Failed to Delete Listing',
+        errMsg
+      );
     } finally {
       setLoading(false);
     }
@@ -433,15 +452,67 @@ export default function EditVehiclePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Make <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="make"
-                      placeholder="Enter vehicle make"
                       value={formData.make}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
-                    />
+                    >
+                      <option value="">Select vehicle make</option>
+                      <option value="Toyota">Toyota</option>
+                      <option value="Honda">Honda</option>
+                      <option value="Ford">Ford</option>
+                      <option value="Chevrolet">Chevrolet</option>
+                      <option value="BMW">BMW</option>
+                      <option value="Mercedes-Benz">Mercedes-Benz</option>
+                      <option value="Audi">Audi</option>
+                      <option value="Volkswagen">Volkswagen</option>
+                      <option value="Nissan">Nissan</option>
+                      <option value="Hyundai">Hyundai</option>
+                      <option value="Kia">Kia</option>
+                      <option value="Mazda">Mazda</option>
+                      <option value="Subaru">Subaru</option>
+                      <option value="Lexus">Lexus</option>
+                      <option value="Acura">Acura</option>
+                      <option value="Infiniti">Infiniti</option>
+                      <option value="Tesla">Tesla</option>
+                      <option value="Porsche">Porsche</option>
+                      <option value="Ferrari">Ferrari</option>
+                      <option value="Lamborghini">Lamborghini</option>
+                      <option value="Jaguar">Jaguar</option>
+                      <option value="Land Rover">Land Rover</option>
+                      <option value="Volvo">Volvo</option>
+                      <option value="Chrysler">Chrysler</option>
+                      <option value="Dodge">Dodge</option>
+                      <option value="Jeep">Jeep</option>
+                      <option value="Ram">Ram</option>
+                      <option value="GMC">GMC</option>
+                      <option value="Cadillac">Cadillac</option>
+                      <option value="Lincoln">Lincoln</option>
+                      <option value="Buick">Buick</option>
+                      <option value="Mitsubishi">Mitsubishi</option>
+                      <option value="Suzuki">Suzuki</option>
+                      <option value="Isuzu">Isuzu</option>
+                      <option value="Peugeot">Peugeot</option>
+                      <option value="Renault">Renault</option>
+                      <option value="Citroën">Citroën</option>
+                      <option value="Fiat">Fiat</option>
+                      <option value="Alfa Romeo">Alfa Romeo</option>
+                      <option value="Maserati">Maserati</option>
+                      <option value="Bentley">Bentley</option>
+                      <option value="Rolls-Royce">Rolls-Royce</option>
+                      <option value="Aston Martin">Aston Martin</option>
+                      <option value="McLaren">McLaren</option>
+                      <option value="Genesis">Genesis</option>
+                      <option value="Polestar">Polestar</option>
+                      <option value="Rivian">Rivian</option>
+                      <option value="Lucid">Lucid</option>
+                      <option value="NIO">NIO</option>
+                      <option value="BYD">BYD</option>
+                      <option value="Geely">Geely</option>
+                      <option value="Great Wall">Great Wall</option>
+                    </select>
                   </div>
 
                   <div>
@@ -547,6 +618,9 @@ export default function EditVehiclePage() {
                       <option value="automatic">Automatic</option>
                       <option value="manual">Manual</option>
                       <option value="cvt">CVT</option>
+                      <option value="dual-clutch">Dual-Clutch</option>
+                      <option value="semi-automatic">Semi-Automatic</option>
+                      <option value="amt">AMT</option>
                     </select>
                   </div>
 
@@ -564,10 +638,21 @@ export default function EditVehiclePage() {
                       <option value="">Select vehicle type</option>
                       <option value="sedan">Sedan</option>
                       <option value="suv">SUV</option>
-                      <option value="pickup">Pickup</option>
                       <option value="hatchback">Hatchback</option>
-                      <option value="mpv">MPV</option>
                       <option value="coupe">Coupe</option>
+                      <option value="convertible">Convertible</option>
+                      <option value="wagon">Wagon</option>
+                      <option value="pickup truck">Pickup Truck</option>
+                      <option value="minivan">Minivan</option>
+                      <option value="crossover">Crossover</option>
+                      <option value="roadster">Roadster</option>
+                      <option value="van">Van</option>
+                      <option value="luxury sedan">Luxury Sedan</option>
+                      <option value="sports car">Sports Car</option>
+                      <option value="compact car">Compact Car</option>
+                      <option value="midsize car">Midsize Car</option>
+                      <option value="full-size car">Full-size Car</option>
+                      <option value="subcompact car">Subcompact Car</option>
                     </select>
                   </div>
 
@@ -583,10 +668,14 @@ export default function EditVehiclePage() {
                       required
                     >
                       <option value="">Select fuel type</option>
-                      <option value="petrol">Petrol</option>
+                      <option value="gasoline">Gasoline</option>
                       <option value="diesel">Diesel</option>
-                      <option value="hybrid">Hybrid</option>
                       <option value="electric">Electric</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="plug-in hybrid">Plug-in Hybrid</option>
+                      <option value="cng">CNG</option>
+                      <option value="lpg">LPG</option>
+                      <option value="hydrogen">Hydrogen</option>
                     </select>
                   </div>
 

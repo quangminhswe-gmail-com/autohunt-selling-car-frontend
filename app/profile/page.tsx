@@ -39,6 +39,7 @@ type Posting = {
   locationCity: string;
   locationDistrict: string;
   locationAddress: string;
+  status: 'draft' | 'pending_approval' | 'active' | 'reserved' | 'sold' | 'expired' | 'hidden' | 'blocked';
   vehicle: {
     id?: string;
     _id?: string;
@@ -172,6 +173,27 @@ export default function ProfilePage() {
     fetchMyListings();
   }, []);
 
+  const markPostingAsSold = async (postingId: string) => {
+    try {
+      await apiClient(`/postings/${postingId}`, {
+        method: 'PATCH',
+        body: { status: 'sold' },
+      });
+      // Update the local state to reflect the change
+      setMyListings((prevListings) =>
+        prevListings.map((posting) =>
+          posting._id === postingId || posting.id === postingId
+            ? { ...posting, status: 'sold' as const }
+            : posting
+        )
+      );
+      alert('Listing marked as sold!');
+    } catch (error) {
+      console.error('Failed to mark listing as sold:', error);
+      alert('Failed to mark listing as sold.');
+    }
+  };
+
 
   const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
     month: 'long',
@@ -181,7 +203,7 @@ export default function ProfilePage() {
   const postedCarsCount = myListings.length;
 
   const canShowRating =
-    user.sellerStatus === 'approved' && postedCarsCount > 0;
+    (user.sellerStatus === 'approved' && postedCarsCount > 0) || user.rating > 0;
 
   const handleSave = async () => {
     if (!originalData) return;
@@ -322,14 +344,38 @@ export default function ProfilePage() {
                   </div>
 
                   {canShowRating && (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-yellow-400 text-lg">★</span>
-                        <span className="text-xl font-bold text-gray-900">
-                          {user.rating.toFixed(1)}
-                        </span>
+                    <div className="text-center bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
+                      <div className="flex items-center justify-center gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <svg
+                            key={i}
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className={`${
+                              i <= Math.floor(user.rating)
+                                ? 'text-yellow-400'
+                                : i - user.rating < 1
+                                ? 'text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                            style={{
+                              opacity:
+                                i <= Math.floor(user.rating) ? 1 : i - user.rating < 1 ? user.rating % 1 : 0.3,
+                            }}
+                          >
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                          </svg>
+                        ))}
                       </div>
-                      <p className="text-sm text-gray-600">Seller Rating</p>
+                      <span className="text-xl font-bold text-gray-900 block mb-1">
+                        {user.rating.toFixed(1)}
+                      </span>
+                      <p className="text-sm text-gray-600 font-medium">Seller Rating</p>
+                      <div className="mt-2 px-3 py-1 bg-white rounded-full text-xs text-gray-600 font-medium inline-block">
+                        ⭐ Trusted Seller
+                      </div>
                     </div>
                   )}
                 </div>
@@ -508,7 +554,7 @@ export default function ProfilePage() {
 
                         return (
                           <div key={postingId ?? posting._id ?? posting.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                            <Link href={`/vehicle/${postingId}`} className="block">
+                            <Link href={`/vehicle/${postingId}`} className="block relative">
                               <div className="h-40 bg-gray-100">
                                 {imageSrc ? (
                                   <img
@@ -522,6 +568,13 @@ export default function ProfilePage() {
                                   </div>
                                 )}
                               </div>
+                              {posting.status === 'sold' && (
+                                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                                  <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg">
+                                    SOLD
+                                  </div>
+                                </div>
+                              )}
                             </Link>
 
                             <div className="p-4 space-y-2 flex-1 flex flex-col">
@@ -558,14 +611,28 @@ export default function ProfilePage() {
 
                               <div className="mt-auto pt-2">
                                 <div className="flex gap-2">
-                                  {vehicle ? (
+                                  {vehicle && posting.status !== 'sold' ? (
                                     <Link href={`/profile/vehicle/${vehicleId}/edit`} className="flex-1">
                                       <button className="w-full border text-black rounded-md py-2 text-sm hover:bg-gray-50">Edit</button>
                                     </Link>
                                   ) : (
                                     <button className="flex-1 border text-gray-400 rounded-md py-2 text-sm cursor-not-allowed" disabled>Edit</button>
                                   )}
-                                  <button className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]">Mark Sold</button>
+                                  {posting.status !== 'sold' ? (
+                                    <button
+                                      onClick={() => markPostingAsSold(postingId ?? posting._id!)}
+                                      className="flex-1 bg-[#006557] text-white rounded-md py-2 text-sm hover:bg-[#005446]"
+                                    >
+                                      Mark Sold
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="flex-1 bg-gray-400 text-white rounded-md py-2 text-sm cursor-not-allowed"
+                                      disabled
+                                    >
+                                      Sold
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
