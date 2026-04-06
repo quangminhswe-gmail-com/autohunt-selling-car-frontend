@@ -248,145 +248,77 @@ export default function ProfilePage() {
           ) : error ? (
             <div className="rounded-lg border bg-white p-8 text-center text-red-600">{error}</div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border">
+            <div className="bg-white rounded-[2rem] shadow-lg overflow-hidden border border-gray-200">
               {/* ================= HEADER ================= */}
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between flex-wrap gap-6">
-                <div className="flex items-center gap-5">
-                  {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                      {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <svg
-                          className="w-12 h-12 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 px-5 py-6 text-white">
+                <div className="mx-auto grid w-full max-w-[1040px] gap-5 lg:grid-cols-[minmax(240px,_280px)_1fr] items-center">
+                  <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/15 bg-white/10 p-4 shadow-[0_28px_84px_-52px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-20 h-20 rounded-full border border-white/25 bg-white/10 flex items-center justify-center overflow-hidden">
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
                           />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Upload */}
-                    <label className="absolute bottom-0 right-0 bg-[#006557] p-2 rounded-full cursor-pointer hover:bg-[#005446]">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        hidden
-                        onChange={handleAvatarChange}
-                      />
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 7h4l2-3h6l2 3h4v13H3V7z"
-                        />
-                      </svg>
-                    </label>
-                  </div>
-
-                  {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-2xl font-bold text-gray-900">
-                        {user.firstName} {user.lastName}
-                      </h1>
-
-                      {user.isEmailVerified && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                          <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 16H0V0H12V16Z" stroke="#E5E7EB"/>
-                            <g clip-path="url(#clip0_250_742)">
-                            <path d="M6 13.5C7.5913 13.5 9.11742 12.8679 10.2426 11.7426C11.3679 10.6174 12 9.0913 12 7.5C12 5.9087 11.3679 4.38258 10.2426 3.25736C9.11742 2.13214 7.5913 1.5 6 1.5C4.4087 1.5 2.88258 2.13214 1.75736 3.25736C0.632141 4.38258 0 5.9087 0 7.5C0 9.0913 0.632141 10.6174 1.75736 11.7426C2.88258 12.8679 4.4087 13.5 6 13.5ZM8.64844 6.39844L5.64844 9.39844C5.42813 9.61875 5.07188 9.61875 4.85391 9.39844L3.35391 7.89844C3.13359 7.67813 3.13359 7.32188 3.35391 7.10391C3.57422 6.88594 3.93047 6.88359 4.14844 7.10391L5.25 8.20547L7.85156 5.60156C8.07187 5.38125 8.42812 5.38125 8.64609 5.60156C8.86406 5.82187 8.86641 6.17812 8.64609 6.39609L8.64844 6.39844Z" fill="#166534"/>
-                            </g>
-                            <defs>
-                            <clipPath id="clip0_250_742">
-                            <path d="M0 1.5H12V13.5H0V1.5Z" fill="white"/>
-                            </clipPath>
-                            </defs>
-                        </svg>
-                            Verified
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-gray-600 text-sm">
-                      Member since {memberSince}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="flex gap-10">
-                  <div className="text-center">
-                    <p className="text-xl font-bold text-gray-900">
-                      {postedCarsCount}
-                    </p>
-                    <p className="text-sm text-gray-600">Cars Posted</p>
-                  </div>
-
-                  {canShowRating && (
-                    <div className="text-center bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
-                      <div className="flex items-center justify-center gap-1 mb-2">
-                        {[1, 2, 3, 4, 5].map((i) => (
+                        ) : (
                           <svg
-                            key={i}
-                            width="20"
-                            height="20"
+                            className="w-14 h-14 text-white/80"
+                            fill="none"
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
-                            fill="currentColor"
-                            className={`${
-                              i <= Math.floor(user.rating)
-                                ? 'text-yellow-400'
-                                : i - user.rating < 1
-                                ? 'text-yellow-400'
-                                : 'text-gray-300'
-                            }`}
-                            style={{
-                              opacity:
-                                i <= Math.floor(user.rating) ? 1 : i - user.rating < 1 ? user.rating % 1 : 0.3,
-                            }}
                           >
-                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
                           </svg>
-                        ))}
+                        )}
                       </div>
-                      <span className="text-xl font-bold text-gray-900 block mb-1">
-                        {user.rating.toFixed(1)}
-                      </span>
-                      <p className="text-sm text-gray-600 font-medium">Seller Rating</p>
-                      <div className="mt-2 px-3 py-1 bg-white rounded-full text-xs text-gray-600 font-medium inline-block">
-                        ⭐ Trusted Seller
-                      </div>
+
+                      <label className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/90 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm cursor-pointer transition hover:bg-white">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          onChange={handleAvatarChange}
+                        />
+                        Upload photo
+                      </label>
                     </div>
-                  )}
+
+                    <div className="text-center">
+                      <h1 className="text-xl font-semibold tracking-tight text-white">{user.firstName} {user.lastName}</h1>
+                      <p className="mt-1 text-xs text-white/80">Member since {memberSince}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-[1.75rem] border border-white/20 bg-white/10 p-3 text-center backdrop-blur-sm transition hover:bg-white/20">
+                      <p className="text-xl font-bold text-white">{postedCarsCount}</p>
+                      <p className="mt-1 text-xs text-white/80">Cars Posted</p>
+                    </div>
+
+                    <div className="rounded-[1.75rem] border border-white/20 bg-white/10 p-3 text-center backdrop-blur-sm transition hover:bg-white/20">
+                      <p className="text-xl font-bold text-white">{user.rating.toFixed(1)}</p>
+                      <p className="mt-1 text-xs text-white/80">Seller Rating</p>
+                    </div>
+
+                    <div className="rounded-[1.75rem] border border-white/20 bg-white/10 p-3 text-center backdrop-blur-sm transition hover:bg-white/20">
+                      <p className="text-xl font-bold text-white">{user.sellerStatus === 'approved' ? 'Approved' : user.sellerStatus === 'pending' ? 'Pending' : 'Customer'}</p>
+                      <p className="mt-1 text-xs text-white/80">Account Status</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* ================= CONTENT ================= */}
-            <div className="p-6">
+              {/* ================= CONTENT ================= */}
+              <div className="px-6 py-8">
               {/* Tabs */}
-              <div className="border-b mb-6">
-                <nav className="flex space-x-8">
+              <div className="mb-8 rounded-full bg-slate-100 p-1 shadow-sm">
+                <nav className="flex flex-wrap gap-2">
                   {[
                     { key: 'personal', label: 'Personal Information' },
                     { key: 'account', label: 'Account Settings' },
@@ -395,10 +327,10 @@ export default function ProfilePage() {
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key as any)}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                         activeTab === tab.key
-                          ? 'border-[#006557] text-[#006557]'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'bg-emerald-600 text-white shadow-lg'
+                          : 'bg-white text-gray-700 hover:bg-slate-100'
                       }`}
                     >
                       {tab.label}
@@ -407,76 +339,64 @@ export default function ProfilePage() {
                 </nav>
               </div>
 
-              {/* ===== PERSONAL (GIỮ NGUYÊN LAYOUT) ===== */}
+              {/* ===== PERSONAL ===== */}
               {activeTab === 'personal' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Personal Information
-                  </h2>
+                <div className="space-y-8">
+                  <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
+                      <div>
+                        <h2 className="text-2xl font-semibold text-gray-900">Personal Information</h2>
+                        <p className="mt-1 text-sm text-gray-500">Update your name, email, and phone number.</p>
+                      </div>
+                      <button
+                        onClick={handleSave}
+                        className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-emerald-700"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2">
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         First Name
+                        <input
+                          type="text"
+                          value={user.firstName}
+                          onChange={(e) => setUser({ ...user, firstName: e.target.value })}
+                          className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        />
                       </label>
-                      <input
-                        type="text"
-                        value={user.firstName}
-                        onChange={(e) =>
-                          setUser({ ...user, firstName: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006557]"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         Last Name
+                        <input
+                          type="text"
+                          value={user.lastName}
+                          onChange={(e) => setUser({ ...user, lastName: e.target.value })}
+                          className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        />
                       </label>
-                      <input
-                        type="text"
-                        value={user.lastName}
-                        onChange={(e) =>
-                          setUser({ ...user, lastName: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006557]"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         Email Address
+                        <input
+                          type="email"
+                          value={user.email}
+                          readOnly
+                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed"
+                        />
                       </label>
-                      <input
-                        type="email"
-                        value={user.email}
-                        readOnly
-                        className="w-full px-3 py-2 text-black border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         Phone Number
+                        <input
+                          type="tel"
+                          value={user.phoneNumber}
+                          onChange={(e) => setUser({ ...user, phoneNumber: e.target.value })}
+                          className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        />
                       </label>
-                      <input
-                        type="tel"
-                        value={user.phoneNumber}
-                        onChange={(e) =>
-                          setUser({ ...user, phoneNumber: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006557]"
-                      />
                     </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSave}
-                      className="bg-[#006557] text-white px-6 py-2 rounded-md hover:bg-[#005446]"
-                    >
-                      Save Changes
-                    </button>
                   </div>
                 </div>
               )}
@@ -484,39 +404,46 @@ export default function ProfilePage() {
               {/* ACCOUNT */}
               {activeTab === 'account' && (
                 <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
-
-                  <div className="space-y-4">
-                    {[
-                      {
-                        title: 'Change Password',
-                        desc: 'Update your password to keep your account secure',
-                        action: 'Change',
-                      },
-                      {
-                        title: 'Email Notifications',
-                        desc: 'Manage your email notification preferences',
-                        action: 'Manage',
-                      },
-                      {
-                        title: 'Privacy Settings',
-                        desc: 'Control your privacy and data sharing preferences',
-                        action: 'Settings',
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.title}
-                        className="flex items-center justify-between p-4 border rounded-md"
-                      >
-                        <div>
-                          <h3 className="font-medium text-gray-900">{item.title}</h3>
-                          <p className="text-sm text-gray-600">{item.desc}</p>
-                        </div>
-                        <button className="text-[#006557] font-medium hover:text-[#005446]">
-                          {item.action}
-                        </button>
+                  <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+                    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h2 className="text-2xl font-semibold text-gray-900">Account Settings</h2>
+                        <p className="text-sm text-gray-500">Manage your security and privacy preferences.</p>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="space-y-4">
+                      {[
+                        {
+                          title: 'Change Password',
+                          desc: 'Update your password to keep your account secure',
+                          action: 'Change',
+                        },
+                        {
+                          title: 'Email Notifications',
+                          desc: 'Manage your email notification preferences',
+                          action: 'Manage',
+                        },
+                        {
+                          title: 'Privacy Settings',
+                          desc: 'Control your privacy and data sharing preferences',
+                          action: 'Settings',
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.title}
+                          className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                            <p className="mt-1 text-sm text-gray-600">{item.desc}</p>
+                          </div>
+                          <button className="inline-flex items-center justify-center rounded-full border border-emerald-600 px-5 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50">
+                            {item.action}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

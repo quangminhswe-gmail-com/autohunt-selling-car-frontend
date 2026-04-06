@@ -77,9 +77,9 @@ export default function Header() {
             <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors relative">
               <BellIcon className="w-6 h-6 text-black" />
               {/* Notification Badge - placeholder for now */}
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 3
-              </span>
+              </span> */}
             </button>
 
             {/* User Dropdown */}
