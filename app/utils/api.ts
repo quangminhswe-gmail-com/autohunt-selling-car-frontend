@@ -10,17 +10,28 @@ interface ApiOptions extends RequestInit {
 }
 
 export const apiClient = async <T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
-    const { body, headers, ...customConfig } = options;
-    const config: RequestInit = {
-        ...customConfig,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-    };
-    if (body) {
-        config.body = JSON.stringify(body);
-    }
+  const { body, headers, ...customConfig } = options;
+
+  // 1. Lấy token từ két sắt (chỉ chạy trên trình duyệt)
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
+  }
+
+  // 2. Gắn token vào Header (Giống hệt tab Auth trong Postman)
+  const config: RequestInit = {
+    ...customConfig,
+    headers: {
+      'Content-Type': 'application/json',
+      // Nếu có token thì tự động thêm dòng Authorization vào
+      ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+      ...headers,
+    },
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
 
     const url = `${getBaseUrl()}${endpoint}`;
     const response = await fetch(url, config);

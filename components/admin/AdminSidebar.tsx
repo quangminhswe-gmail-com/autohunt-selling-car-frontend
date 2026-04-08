@@ -169,30 +169,18 @@ export default function AdminSidebar() {
         />
       </div>
 
-      {/* 3. Footer User Profile */}
-      <div className="p-4 border-t border-gray-50 bg-white">
-        <div className="flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-gray-50 cursor-pointer">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 bg-gray-100 shrink-0">
-            <img
-              src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e"
-              alt="Admin"
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate leading-tight">
-              Admin
-            </p>
-            <p className="text-[11px] text-gray-400 truncate leading-tight mt-0.5">
-              Mark@thedesigner...
-            </p>
-          </div>
-
-          <button className="text-gray-400 hover:text-red-500 transition-colors p-1">
-            <LogOut size={18} />
-          </button>
-        </div>
+{/* 3. Footer: Logout Button */}
+      <div className="p-4 border-t border-gray-100 bg-white">
+        <button 
+          onClick={() => {
+            // Thêm logic xử lý đăng xuất của bạn tại đây (vd: signOut(), xoá token, redirect...)
+            console.log("User logged out");
+          }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-[14px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+        >
+          <LogOut size={20} />
+          <span>Sign out</span>
+        </button>
       </div>
     </aside>
   );
