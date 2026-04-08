@@ -36,6 +36,9 @@ interface Order {
     _id: string;
     email: string;
   };
+  customerName?: string;
+  customerPhone?: string;
+  deliveryAddress?: string;
   agreedPrice: number;
   depositAmount: number;
   paymentMethod: string;
@@ -445,6 +448,24 @@ export default function OrderDetailPage() {
                   <p className="text-sm text-gray-600">Buyer</p>
                   <p className="font-semibold text-gray-900">{order.customerId?.email}</p>
                 </div>
+                {order.customerName && (
+                  <div>
+                    <p className="text-sm text-gray-600">Buyer Name</p>
+                    <p className="font-semibold text-gray-900">{order.customerName}</p>
+                  </div>
+                )}
+                {order.customerPhone && (
+                  <div>
+                    <p className="text-sm text-gray-600">Buyer Phone</p>
+                    <p className="font-semibold text-gray-900">{order.customerPhone}</p>
+                  </div>
+                )}
+                {order.deliveryAddress && (
+                  <div>
+                    <p className="text-sm text-gray-600">Delivery Address</p>
+                    <p className="font-semibold text-gray-900 whitespace-pre-line">{order.deliveryAddress}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

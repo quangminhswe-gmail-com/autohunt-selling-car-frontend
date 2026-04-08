@@ -53,6 +53,9 @@ export default function VehicleBuyPage() {
   const [agreedPrice, setAgreedPrice] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [buyerName, setBuyerName] = useState('');
+  const [buyerPhone, setBuyerPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   useEffect(() => {
     const loadPosting = async () => {
@@ -72,7 +75,28 @@ export default function VehicleBuyPage() {
       }
     };
 
+    const loadProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const profile = await apiClient<{
+          firstName?: string;
+          lastName?: string;
+          phoneNumber?: string;
+          deliveryAddress?: string;
+        }>('/users/me');
+
+        setBuyerName([profile.firstName, profile.lastName].filter(Boolean).join(' ').trim());
+        setBuyerPhone(profile.phoneNumber || '');
+        setDeliveryAddress(profile.deliveryAddress || '');
+      } catch (err) {
+        console.warn('Unable to load account info for order form', err);
+      }
+    };
+
     loadPosting();
+    loadProfile();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,6 +140,21 @@ export default function VehicleBuyPage() {
       return;
     }
 
+    if (!buyerName.trim()) {
+      setError('Please enter the name of the person placing the order.');
+      return;
+    }
+
+    if (!buyerPhone.trim()) {
+      setError('Please enter a phone number for delivery contact.');
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      setError('Please enter a delivery address.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const order = await apiClient('/orders', {
@@ -126,6 +165,9 @@ export default function VehicleBuyPage() {
           agreedPrice: agreedPriceValue,
           depositAmount: depositValue,
           paymentMethod,
+          customerName: buyerName.trim(),
+          customerPhone: buyerPhone.trim(),
+          deliveryAddress: deliveryAddress.trim(),
         },
       });
 
@@ -255,6 +297,42 @@ export default function VehicleBuyPage() {
                     <option value="bank_transfer">Bank transfer</option>
                     {/* <option value="escrow">Escrow</option> */}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Name of person placing the order</label>
+                  <input
+                    type="text"
+                    value={buyerName}
+                    onChange={(e) => setBuyerName(e.target.value)}
+                    className="text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006557]"
+                    placeholder="Full name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone number</label>
+                  <input
+                    type="tel"
+                    value={buyerPhone}
+                    onChange={(e) => setBuyerPhone(e.target.value)}
+                    className="text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006557]"
+                    placeholder="Delivery contact phone"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Delivery address</label>
+                  <textarea
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006557]"
+                    placeholder="Street address, city, and postal code"
+                    rows={3}
+                    required
+                  />
                 </div>
 
                 {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 text-sm">{error}</div>}

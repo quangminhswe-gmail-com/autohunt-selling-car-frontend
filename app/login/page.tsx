@@ -42,8 +42,13 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
+    if (provider === 'Google') {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      window.location.href = `${backendUrl}/auth/google`;
+      return;
+    }
+
     console.log(`Login with ${provider}`);
-    // Implement social login logic
   };
 
   return (

@@ -16,6 +16,7 @@ type User = {
   firstName: string;
   lastName: string;
   phoneNumber: string;
+  deliveryAddress: string;
   role: UserRole;
   isEmailVerified: boolean;
   isActive: boolean;
@@ -92,6 +93,13 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('personal');
   const [myListings, setMyListings] = useState<Posting[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const [user, setUser] = useState({
     id: '',
@@ -100,6 +108,7 @@ export default function ProfilePage() {
     firstName: '',
     lastName: '',
     phoneNumber: '',
+    deliveryAddress: '',
 
     role: 'customer' as UserRole,
     isEmailVerified: false,
@@ -128,6 +137,7 @@ export default function ProfilePage() {
           firstName: data.firstName || '',
           lastName: data.lastName || '',
           phoneNumber: data.phoneNumber && data.phoneNumber !== 'false' ? data.phoneNumber : '',
+          deliveryAddress: data.deliveryAddress || '',
           role: data.role || 'customer',
           isEmailVerified: data.isEmailVerified || false,
           isActive: data.isActive || false,
@@ -212,6 +222,7 @@ export default function ProfilePage() {
       if (user.firstName !== originalData.firstName) updateData.firstName = user.firstName;
       if (user.lastName !== originalData.lastName) updateData.lastName = user.lastName;
       if (user.phoneNumber !== originalData.phoneNumber) updateData.phoneNumber = user.phoneNumber;
+      if (user.deliveryAddress !== originalData.deliveryAddress) updateData.deliveryAddress = user.deliveryAddress;
 
       if (Object.keys(updateData).length > 0) {
         await apiClient('/users/me', {
@@ -226,6 +237,36 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Failed to update profile.');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await apiClient('/users/me/password', {
+        method: 'PATCH',
+        body: {
+          currentPassword,
+          newPassword,
+        },
+      });
+      setPasswordSuccess('Password updated successfully.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('Password change error:', error);
+      setPasswordError((error as Error).message || 'Failed to change password.');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -346,7 +387,7 @@ export default function ProfilePage() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
                       <div>
                         <h2 className="text-2xl font-semibold text-gray-900">Personal Information</h2>
-                        <p className="mt-1 text-sm text-gray-500">Update your name, email, and phone number.</p>
+                        <p className="mt-1 text-sm text-gray-500">Update your name, email, phone number, and delivery address.</p>
                       </div>
                       <button
                         onClick={handleSave}
@@ -396,6 +437,17 @@ export default function ProfilePage() {
                           className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                         />
                       </label>
+
+                      <label className="block text-sm font-medium text-gray-700 md:col-span-2">
+                        Delivery Address
+                        <textarea
+                          value={user.deliveryAddress}
+                          onChange={(e) => setUser({ ...user, deliveryAddress: e.target.value })}
+                          className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                          rows={3}
+                          placeholder="Street address, city, postal code"
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -413,38 +465,124 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-4">
-                      {[
-                        {
-                          title: 'Change Password',
-                          desc: 'Update your password to keep your account secure',
-                          action: 'Change',
-                        },
-                        {
-                          title: 'Email Notifications',
-                          desc: 'Manage your email notification preferences',
-                          action: 'Manage',
-                        },
-                        {
-                          title: 'Privacy Settings',
-                          desc: 'Control your privacy and data sharing preferences',
-                          action: 'Settings',
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.title}
-                          className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                            <p className="mt-1 text-sm text-gray-600">{item.desc}</p>
-                          </div>
-                          <button className="inline-flex items-center justify-center rounded-full border border-emerald-600 px-5 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50">
-                            {item.action}
-                          </button>
+                      <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Change Password</h3>
+                          <p className="mt-1 text-sm text-gray-600">Update your password to keep your account secure.</p>
                         </div>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordModal(true)}
+                          className="inline-flex items-center justify-center rounded-full border border-emerald-600 px-5 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50"
+                        >
+                          Change
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Email Notifications</h3>
+                          <p className="mt-1 text-sm text-gray-600">Manage your email notification preferences.</p>
+                        </div>
+                        <button className="inline-flex items-center justify-center rounded-full border border-emerald-600 px-5 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50">
+                          Manage
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Privacy Settings</h3>
+                          <p className="mt-1 text-sm text-gray-600">Control your privacy and data sharing preferences.</p>
+                        </div>
+                        <button className="inline-flex items-center justify-center rounded-full border border-emerald-600 px-5 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50">
+                          Settings
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {showPasswordModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+                      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl ring-1 ring-black/5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h3 className="text-2xl font-semibold text-gray-900">Change Password</h3>
+                            <p className="mt-1 text-sm text-gray-500">Enter your current password and choose a new password.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordModal(false)}
+                            className="text-gray-400 transition hover:text-gray-600"
+                          >
+                            <span className="sr-only">Close</span>
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="mt-6 grid gap-5">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Current Password
+                            <input
+                              type="password"
+                              value={currentPassword}
+                              onChange={(e) => setCurrentPassword(e.target.value)}
+                              className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                            />
+                          </label>
+
+                          <label className="block text-sm font-medium text-gray-700">
+                            New Password
+                            <input
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                            />
+                          </label>
+
+                          <label className="block text-sm font-medium text-gray-700">
+                            Confirm New Password
+                            <input
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                            />
+                          </label>
+
+                          {passwordError && (
+                            <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+                              {passwordError}
+                            </div>
+                          )}
+
+                          {passwordSuccess && (
+                            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 border border-emerald-200">
+                              {passwordSuccess}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswordModal(false)}
+                              className="rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleChangePassword}
+                              disabled={passwordLoading}
+                              className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                            >
+                              {passwordLoading ? 'Updating...' : 'Update Password'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
