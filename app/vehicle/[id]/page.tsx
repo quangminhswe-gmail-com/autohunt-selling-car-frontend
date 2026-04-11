@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { apiClient } from '@/app/utils/api';
+import { showErrorNotification } from '@/utils/notifications';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
 
@@ -169,7 +170,7 @@ export default function VehicleDetailsPage() {
 
   const handleContactSeller = async (carId: number | string) => {
     if (!posting?.ownerId?._id) {
-      alert('Seller information is unavailable.');
+      showErrorNotification('Error', 'Seller information is unavailable.');
       return;
     }
 
@@ -192,7 +193,7 @@ export default function VehicleDetailsPage() {
       window.location.href = `/messages/${conversation._id}`;
     } catch (err) {
       console.error('Unable to start conversation', err);
-      alert('Unable to start the conversation. Please try again later.');
+      showErrorNotification('Error', 'Unable to start the conversation. Please try again later.');
     }
   };
 

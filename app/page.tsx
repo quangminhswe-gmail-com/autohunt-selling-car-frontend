@@ -10,6 +10,7 @@ import HowItWorks from '@/components/HowItWorks';
 import ReadyToSell from '@/components/ReadyToSell';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
+import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
 
 
@@ -93,7 +94,7 @@ export default function HomePage() {
       window.location.href = `/messages/${conversation._id}`;
     } catch (err) {
       console.error('Failed to start conversation', err);
-      alert((err as Error).message || 'Unable to start conversation. Please try again.');
+      showErrorNotification('Error', (err as Error).message || 'Unable to start conversation. Please try again.');
     }
   };
 

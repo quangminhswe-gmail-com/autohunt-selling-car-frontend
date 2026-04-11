@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
 import { apiClient } from '@/app/utils/api';
+import { showSuccessNotification, showErrorNotification, showInfoNotification } from '@/utils/notifications';
 
 type SellerStatus = 'none' | 'pending' | 'approved' | 'rejected';
 type UserRole = 'admin' | 'customer';
@@ -197,10 +198,10 @@ export default function ProfilePage() {
             : posting
         )
       );
-      alert('Listing marked as sold!');
+      showSuccessNotification('Success', 'Listing marked as sold!');
     } catch (error) {
       console.error('Failed to mark listing as sold:', error);
-      alert('Failed to mark listing as sold.');
+      showErrorNotification('Error', 'Failed to mark listing as sold.');
     }
   };
 
@@ -223,6 +224,7 @@ export default function ProfilePage() {
       if (user.lastName !== originalData.lastName) updateData.lastName = user.lastName;
       if (user.phoneNumber !== originalData.phoneNumber) updateData.phoneNumber = user.phoneNumber;
       if (user.deliveryAddress !== originalData.deliveryAddress) updateData.deliveryAddress = user.deliveryAddress;
+      if (user.avatarUrl !== originalData.avatarUrl) updateData.avatarUrl = user.avatarUrl;
 
       if (Object.keys(updateData).length > 0) {
         await apiClient('/users/me', {
@@ -230,13 +232,13 @@ export default function ProfilePage() {
           body: updateData,
         });
         setOriginalData({ ...originalData, ...updateData });
-        alert('Profile updated successfully!');
+        showSuccessNotification('Success', 'Profile updated successfully!');
       } else {
-        alert('No changes to save.');
+        showInfoNotification('Info', 'No changes to save.');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile.');
+      showErrorNotification('Error', 'Failed to update profile.');
     }
   };
 
@@ -276,6 +278,21 @@ export default function ProfilePage() {
 
     const previewUrl = URL.createObjectURL(file);
     setUser({ ...user, avatarUrl: previewUrl });
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      await apiClient('/users/me', {
+        method: 'PATCH',
+        body: { avatarUrl: '' },
+      });
+      setUser({ ...user, avatarUrl: '' });
+      setOriginalData({ ...originalData!, avatarUrl: '' });
+      showSuccessNotification('Success', 'Avatar deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting avatar:', error);
+      showErrorNotification('Error', 'Failed to delete avatar.');
+    }
   };
 
   return (
@@ -328,6 +345,14 @@ export default function ProfilePage() {
                         />
                         Upload photo
                       </label>
+                      {user.avatarUrl && (
+                        <button
+                          onClick={handleDeleteAvatar}
+                          className="inline-flex items-center justify-center rounded-full border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm cursor-pointer transition hover:bg-red-100"
+                        >
+                          Delete photo
+                        </button>
+                      )}
                     </div>
 
                     <div className="text-center">

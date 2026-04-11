@@ -267,6 +267,27 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleContactSeller = async () => {
+    if (!order) return;
+
+    try {
+      const targetUserId = isBuyer ? order.ownerId._id : order.customerId._id;
+      const response = await apiClient('/chat/start', {
+        method: 'POST',
+        body: { targetUserId },
+      });
+      
+      // Redirect to messages page or specific conversation
+      router.push('/messages');
+    } catch (err) {
+      console.error('Error starting conversation', err);
+      showErrorNotification(
+        'Failed to Start Conversation',
+        'Unable to contact the other party. Please try again.'
+      );
+    }
+  };
+
   const getStatusBadge = (status: string, type: 'order' | 'payment' | 'delivery') => {
     let colors: { [key: string]: string } = {};
     
@@ -674,6 +695,20 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Contact Button */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Contact</h2>
+              <button
+                onClick={handleContactSeller}
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 font-semibold transition flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {isBuyer ? 'Contact Seller' : 'Contact Buyer'}
+              </button>
+            </div>
 
             {/* Buyer Notice */}
             {isBuyer && !isSeller && (
