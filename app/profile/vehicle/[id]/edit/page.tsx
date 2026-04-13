@@ -116,7 +116,7 @@ export default function EditVehiclePage() {
         const data = await apiClient<any[]>('/vehicle/my-vehicles');
         const found = data.find((v) => v._id === vehicleId || v.id === vehicleId);
         if (!found) {
-          alert('Không tìm thấy xe.');
+          showErrorNotification('Error', 'Vehicle not found.');
           router.push('/profile');
           return;
         }
@@ -156,7 +156,7 @@ export default function EditVehiclePage() {
         setOriginalImages(found.images || []);
       } catch (err) {
         console.error('Failed to load vehicle details', err);
-        alert('Failed to load vehicle details.');
+        showErrorNotification('Error', 'Failed to load vehicle details.');
       } finally {
         setLoading(false);
       }
@@ -213,7 +213,7 @@ export default function EditVehiclePage() {
       return false;
     }
 
-    if (!formData.title || !formData.description || formData.price === '' ||
+    if (!formData.title || formData.price === '' ||
         !formData.locationCity || !formData.locationDistrict) {
       setError('Please fill in all listing information fields');
       return false;
@@ -348,7 +348,7 @@ export default function EditVehiclePage() {
 
   const handleDelete = async () => {
     if (!postingId) {
-      alert('No active posting to delete.');
+      showErrorNotification('Error', 'No active posting to delete.');
       return;
     }
 
@@ -690,7 +690,7 @@ export default function EditVehiclePage() {
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="new">New</option>
+                      {/* <option value="new">New</option> */}
                       <option value="used">Used</option>
                     </select>
                   </div>
@@ -773,22 +773,8 @@ export default function EditVehiclePage() {
                     <p className="text-sm text-gray-500 mt-1">{formData.title.length}/100</p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Detailed Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      placeholder="Describe the vehicle condition, maintenance history, any issues..."
-                      rows={6}
-                      className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Price <span className="text-red-500">*</span>

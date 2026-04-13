@@ -101,6 +101,67 @@ export default function SellCarPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [vehicleId, setVehicleId] = useState<string | null>(null);
+
+  const buildVehicleFormData = () => {
+    const multipart = new FormData();
+    multipart.append('make', formData.make);
+    multipart.append('model', formData.model);
+    multipart.append('yearOfManufacture', formData.yearOfManufacture.toString());
+    multipart.append('licensePlate', formData.licensePlate);
+    multipart.append('transmission', formData.transmission);
+    multipart.append('type', formData.type);
+    multipart.append('fuelType', formData.fuelType);
+    multipart.append('condition', formData.condition);
+    multipart.append('price', formData.price.toString());
+
+    if (formData.vinNumber) {
+      multipart.append('vinNumber', formData.vinNumber);
+    }
+    if (formData.color) {
+      multipart.append('color', formData.color);
+    }
+    if (formData.mileage !== '') {
+      multipart.append('mileage', formData.mileage.toString());
+    }
+    if (formData.vehicleFeatures.length > 0) {
+      multipart.append('features', formData.vehicleFeatures.join(','));
+    }
+
+    formData.images.forEach((imageFile) => {
+      multipart.append('images', imageFile.file);
+    });
+
+    return multipart;
+  };
+
+  const saveVehicle = async () => {
+    const multipart = buildVehicleFormData();
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const endpoint = vehicleId ? `${baseUrl}/vehicle/${vehicleId}` : `${baseUrl}/vehicle`;
+    const method = vehicleId ? 'PATCH' : 'POST';
+
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: multipart,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to save vehicle information');
+    }
+
+    const vehicleData = await response.json();
+    const id = vehicleData._id || vehicleData.id;
+    if (!id) {
+      throw new Error('No vehicle ID returned from the server');
+    }
+    setVehicleId(id);
+    return id;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -150,7 +211,7 @@ export default function SellCarPage() {
       return false;
     }
 
-    if (!formData.title || !formData.description || formData.price === '' || 
+    if (!formData.title || formData.price === '' || 
         !formData.locationCity || !formData.locationDistrict) {
       setError('Please fill in all listing information fields');
       return false;
@@ -180,63 +241,10 @@ export default function SellCarPage() {
     setError('');
 
     try {
-      // Create vehicle with multipart form data (images included)
-      const formDataMultipart = new FormData();
-      
-      // Add required vehicle fields
-      formDataMultipart.append('make', formData.make);
-      formDataMultipart.append('model', formData.model);
-      formDataMultipart.append('yearOfManufacture', formData.yearOfManufacture.toString());
-      formDataMultipart.append('licensePlate', formData.licensePlate);
-      formDataMultipart.append('transmission', formData.transmission);
-      formDataMultipart.append('type', formData.type);
-      formDataMultipart.append('fuelType', formData.fuelType);
-      formDataMultipart.append('condition', formData.condition);
-      formDataMultipart.append('price', formData.price.toString());
-      
-      // Add optional fields if they have values
-      if (formData.vinNumber) {
-        formDataMultipart.append('vinNumber', formData.vinNumber);
-      }
-      if (formData.color) {
-        formDataMultipart.append('color', formData.color);
-      }
-      if (formData.mileage !== '') {
-        formDataMultipart.append('mileage', formData.mileage.toString());
-      }
-      if (formData.vehicleFeatures.length > 0) {
-        formDataMultipart.append('features', formData.vehicleFeatures.join(','));
-      }
-      
-      // Add images
-      formData.images.forEach((imageFile) => {
-        formDataMultipart.append('images', imageFile.file);
-      });
+      const savedVehicleId = await saveVehicle();
 
-      // Create vehicle with multipart form data
-      const vehicleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/vehicle`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formDataMultipart,
-      });
-
-      if (!vehicleResponse.ok) {
-        const errorData = await vehicleResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create vehicle');
-      }
-
-      const vehicleData = await vehicleResponse.json();
-      const vehicleId = vehicleData._id || vehicleData.id;
-
-      if (!vehicleId) {
-        throw new Error('No vehicle ID returned from server');
-      }
-
-      // Step 2: Create posting with vehicle ID
       const postingData = {
-        vehicleId: vehicleId,
+        vehicleId: savedVehicleId,
         title: formData.title,
         description: formData.description,
         price: Number(formData.price),
@@ -251,7 +259,6 @@ export default function SellCarPage() {
         body: postingData,
       });
 
-      // Success - show notification and redirect to profile
       showSuccessNotification(
         'Car Listed Successfully!',
         'Your vehicle has been posted for sale. You can view and manage it from your profile.'
@@ -261,7 +268,14 @@ export default function SellCarPage() {
       }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
-      setError(message);
+      if (vehicleId) {
+        setError(
+          `Your vehicle information is saved. Listing creation failed: ${message}. Please correct any listing details and try again.`
+        );
+        setActiveTab('posting');
+      } else {
+        setError(message);
+      }
       console.error('Submission error:', err);
     } finally {
       setIsLoading(false);
@@ -560,7 +574,7 @@ export default function SellCarPage() {
                       className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="new">New</option>
+                      {/* <option value="new">New</option> */}
                       <option value="used">Used</option>
                     </select>
                   </div>
@@ -635,21 +649,6 @@ export default function SellCarPage() {
                       required
                     />
                     <p className="text-sm text-gray-500 mt-1">{formData.title.length}/100</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Detailed Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      placeholder="Describe the vehicle condition, maintenance history, any issues..."
-                      rows={6}
-                      className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
