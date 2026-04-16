@@ -1,34 +1,99 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
-  Plus, MoreHorizontal, Search, Filter, 
-  ChevronLeft, ChevronRight, ShoppingBag, 
-  Clock, CheckCircle, XCircle, Eye, Printer, DollarSign , Pencil, Trash2
+  Plus, Search, Filter, 
+  ChevronLeft, ChevronRight, ShoppingCart, 
+  Clock, CheckCircle, XCircle, Eye, Trash2
 } from 'lucide-react';
+import { apiClient } from '@/app/utils/api';
 
-// --- MOCK DATA ---
-const orders = Array(10).fill(null).map((_, i) => ({
-  id: i + 1,
-  orderId: `#ORD-782${i}`,
-  customer: {
-    name: i % 2 === 0 ? 'Michael Scott' : 'Dwight Schrute',
-    email: i % 2 === 0 ? 'michael@dunder.com' : 'dwight@farms.com',
-    avatar: `https://i.pravatar.cc/150?u=${i + 50}`
-  },
-  product: {
-    name: 'BMW i10 Sport Edition',
-    image: 'https://img.freepik.com/free-photo/silver-sedan-car_114579-2706.jpg?w=100',
-    variant: 'Silver / Automatic'
-  },
-  date: 'Jan 01, 2026',
-  price: '$9,999.00',
-  paymentStatus: i % 3 === 0 ? 'Paid' : (i % 3 === 1 ? 'Pending' : 'Cancelled'),
-  fulfillment: i % 3 === 0 ? 'Delivered' : 'Processing'
-}));
+// --- TYPES ---
+interface Order {
+  _id: string;
+  customerName: string;
+  customerId?: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  vehicleId?: {
+    make: string;
+    model: string;
+    images: string[];
+    price: number;
+  } | null;
+  postingId?: {
+    title: string;
+    status: string;
+  } | null;
+  agreedPrice: number;
+  paymentStatus: string;
+  orderStatus: string;
+  deliveryStatus: string;
+  createdAt: string;
+}
 
 export default function OrderManagementPage() {
-  
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await apiClient<Order[]>('/admin/orders');
+        setOrders(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  // Filter orders based on search term
+  const filteredOrders = orders.filter((order) => {
+    const term = searchTerm.toLowerCase();
+    const orderId = `#${order._id.slice(-6).toUpperCase()}`.toLowerCase();
+    const customerName = (order.customerName ||
+      [order.customerId?.firstName, order.customerId?.lastName]
+        .filter(Boolean)
+        .join(' ') ||
+      order.customerId?.email ||
+      '').toLowerCase();
+    const vehicleName = `${order.vehicleId?.make || ''} ${order.vehicleId?.model || ''}`.toLowerCase();
+    const postingTitle = (order.postingId?.title || '').toLowerCase();
+
+    return orderId.includes(term) ||
+           customerName.includes(term) ||
+           vehicleName.includes(term) ||
+           postingTitle.includes(term);
+  });
+
+  if (loading) {
+    return (
+      <div className="bg-[#F8F9FA] min-h-screen font-sans text-gray-800 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="text-center py-8">Loading orders...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#F8F9FA] min-h-screen font-sans text-gray-800 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="text-center py-8 text-red-600">Error: {error}</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="bg-[#F8F9FA] min-h-screen font-sans text-gray-800 p-6">
         {/* --- MAIN CONTENT CARD --- */}
@@ -42,6 +107,8 @@ export default function OrderManagementPage() {
                     <input 
                         type="text" 
                         placeholder="Search order ID, customer name..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                     />
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -51,6 +118,12 @@ export default function OrderManagementPage() {
                         <Plus size={18} /> Add Order
                     </button>
                 </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-gray-600">
+                Showing {filteredOrders.length} of {orders.length} orders
+                {searchTerm && ` for "${searchTerm}"`}
             </div>
 
             {/* Table */}
@@ -68,20 +141,24 @@ export default function OrderManagementPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {orders.map((order, index) => (
-                            <tr key={index} className="hover:bg-gray-50 transition-colors group">
+                        {filteredOrders.map((order) => (
+                            <tr key={order._id} className="hover:bg-gray-50 transition-colors group">
                                 <td className="p-4 text-left pl-6">
-                                    <span className="text-sm font-mono font-medium text-gray-500">{order.orderId}</span>
+                                    <span className="text-sm font-mono font-medium text-gray-500">{`#${order._id.slice(-6).toUpperCase()}`}</span>
                                 </td>
                                 
                                 <td className="p-4 text-left">
                                     <div className="flex items-center gap-3">
                                         <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
-                                            <img src={order.product.image} alt="Car" className="w-full h-full object-cover" />
+                                            <img 
+                                                src={order.vehicleId?.images?.[0] || 'https://img.freepik.com/free-photo/silver-sedan-car_114579-2706.jpg?w=100'} 
+                                                alt="Car" 
+                                                className="w-full h-full object-cover" 
+                                            />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-700">{order.product.name}</span>
-                                            <span className="text-xs text-gray-400">{order.product.variant}</span>
+                                            <span className="text-sm font-bold text-gray-700">{`${order.vehicleId?.make || 'Unknown'} ${order.vehicleId?.model || 'Vehicle'}`}</span>
+                                            <span className="text-xs text-gray-400">{order.postingId?.title || 'No title'}</span>
                                         </div>
                                     </div>
                                 </td>
@@ -89,39 +166,59 @@ export default function OrderManagementPage() {
                                 <td className="p-4 text-left">
                                     <div className="flex items-center gap-2">
                                          <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
-                                            <img src={order.customer.avatar} className="w-full h-full object-cover" />
+                                            <img src={`https://i.pravatar.cc/150?u=${order.customerId?.email || 'unknown'}`} className="w-full h-full object-cover" />
                                          </div>
                                          <div className="flex flex-col">
-                                            <span className="text-sm text-gray-700">{order.customer.name}</span>
+                                            <span className="text-sm text-gray-700">
+                                              {order.customerName ||
+                                                [order.customerId?.firstName, order.customerId?.lastName]
+                                                  .filter(Boolean)
+                                                  .join(' ') ||
+                                                order.customerId?.email ||
+                                                'Unknown Customer'}
+                                            </span>
                                          </div>
                                     </div>
                                 </td>
 
-                                <td className="p-4 text-sm text-gray-500 whitespace-nowrap">{order.date}</td>
+                                <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
+                                    {new Date(order.createdAt).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: '2-digit', 
+                                        year: 'numeric' 
+                                    })}
+                                </td>
                                 
-                                <td className="p-4 text-sm font-bold text-slate-800">{order.price}</td>
+                                <td className="p-4 text-sm font-bold text-slate-800">
+                                    ${order.agreedPrice.toLocaleString()}
+                                </td>
                                 
                                 <td className="p-4">
                                     <div className="flex justify-center">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                                            order.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                            order.paymentStatus === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                            order.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                            order.paymentStatus === 'partially_paid' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                             'bg-rose-50 text-rose-700 border-rose-100'
                                         }`}>
-                                            {order.paymentStatus === 'Paid' && <CheckCircle size={12} />}
-                                            {order.paymentStatus === 'Pending' && <Clock size={12} />}
-                                            {order.paymentStatus === 'Cancelled' && <XCircle size={12} />}
-                                            {order.paymentStatus}
+                                            {order.paymentStatus === 'paid' && <CheckCircle size={12} />}
+                                            {order.paymentStatus === 'partially_paid' && <Clock size={12} />}
+                                            {order.paymentStatus === 'unpaid' && <XCircle size={12} />}
+                                            {order.paymentStatus.replace('_', ' ').toUpperCase()}
                                         </span>
                                     </div>
                                 </td>
 
                                 <td className="p-4">
                                     <div className="flex justify-center gap-2 text-gray-400">
-                                        <button className="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-md transition-colors" title="View Detail">
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button className="p-1.5 hover:bg-gray-100 hover:text-gray-600 rounded-md transition-colors">
+                                        <Link
+                                          href={`/admin/orders/${order._id}`}
+                                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 hover:text-emerald-600 transition-colors text-gray-500 cursor-pointer"
+                                          title="View Order Details"
+                                        >
+                                          <Eye size={18} />
+                                          <span className="text-sm font-medium">View</span>
+                                        </Link>
+                                        <button className="inline-flex items-center justify-center p-1.5 hover:bg-gray-100 hover:text-gray-600 rounded-md transition-colors">
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
