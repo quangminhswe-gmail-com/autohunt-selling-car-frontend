@@ -49,7 +49,7 @@ export default function ExploreBrands() {
 
             <div className="flex justify-end">
                 <Link
-                href="/brands"
+                href="/vehicles"
                 className="inline-flex items-center gap-1 text-[#006557] text-xs md:text-sm font-bold hover:text-[#004d44] transition-colors"
                 >
                 See more
