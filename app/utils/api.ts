@@ -1,43 +1,40 @@
 const getBaseUrl = () => {
     if (typeof window === 'undefined') {
-        return process.env.API_URL_INTERNAL;
+        return process.env.API_URL_INTERNAL || 'http://localhost:8080';
     }
-    return process.env.NEXT_PUBLIC_API_URL;
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 };
 
 interface ApiOptions extends RequestInit {
     body?: any;
+    headers?: Record<string, string>;
 }
 
 export const apiClient = async <T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
-  const { body, headers, ...customConfig } = options;
+    const { body, headers, ...customConfig } = options;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  // 1. Lấy token từ két sắt (chỉ chạy trên trình duyệt)
-  let token = null;
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token');
-  }
-
-  // 2. Gắn token vào Header (Giống hệt tab Auth trong Postman)
-  const config: RequestInit = {
-    ...customConfig,
-    headers: {
-      'Content-Type': 'application/json',
-      // Nếu có token thì tự động thêm dòng Authorization vào
-      ...(token ? { Authorization: `Bearer ${token}` } : {}), 
-      ...headers,
-    },
-  };
-
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
+    const config: RequestInit = {
+        ...customConfig,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...headers,
+        },
+    };
+    if (body) {
+        config.body = JSON.stringify(body);
+    }
 
     const url = `${getBaseUrl()}${endpoint}`;
     const response = await fetch(url, config);
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+        const msg = errorData.message;
+        const text = Array.isArray(msg)
+            ? msg.join('. ')
+            : (typeof msg === 'string' ? msg : null);
+        throw new Error(text || `Error ${response.status}: ${response.statusText}`);
     }
     return response.json();
 };
