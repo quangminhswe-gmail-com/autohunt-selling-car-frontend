@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -59,9 +59,19 @@ function NavItem({ label, icon, href, active = false }: MenuItemProps) {
 // --- Main Sidebar Component ---
 export default function AdminSidebar() {
   const pathname = usePathname() || "";
+  const router = useRouter();
 
   // Hàm helper để check active
   const isActive = (path: string) => pathname === path;
+
+  const handleLogout = () => {
+    // Remove token from localStorage
+    localStorage.removeItem("token");
+    // Dispatch auth change event
+    window.dispatchEvent(new Event("authChange"));
+    // Redirect to login page
+    router.push("/login");
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-screen flex-shrink-0 z-20 sticky top-0">
@@ -172,10 +182,7 @@ export default function AdminSidebar() {
 {/* 3. Footer: Logout Button */}
       <div className="p-4 border-t border-gray-100 bg-white">
         <button 
-          onClick={() => {
-            // Thêm logic xử lý đăng xuất của bạn tại đây (vd: signOut(), xoá token, redirect...)
-            console.log("User logged out");
-          }}
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-[14px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
         >
           <LogOut size={20} />
