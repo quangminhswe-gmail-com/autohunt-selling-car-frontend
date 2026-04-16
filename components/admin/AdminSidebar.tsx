@@ -89,57 +89,57 @@ export default function AdminSidebar() {
         <NavItem
           label="Dashboard"
           icon={<LayoutDashboard />}
-          href="/dashboard"
-          active={isActive("/dashboard")}
+          href="/admin/dashboard"
+          active={isActive("/admin/dashboard")}
         />
 
         <NavItem
           label="Order Management"
           icon={<ShoppingCart />}
-          href="/orders"
-          active={isActive("/orders")}
+          href="/admin/orders"
+          active={isActive("/admin/orders")}
         />
 
         <NavItem
           label="Customers"
           icon={<Users />}
-          href="/customers"
-          active={isActive("/customers")}
+          href="/admin/customers"
+          active={isActive("/admin/customers")}
         />
 
         <NavItem
           label="Notifications User"
           icon={<Bell />}
-          href="/notifications"
-          active={isActive("/notifications")}
+          href="/admin/notifications"
+          active={isActive("/admin/notifications")}
         />
 
         <NavItem
           label="Coupon Code"
           icon={<Ticket />}
-          href="/coupons"
-          active={isActive("/coupons")}
+          href="/admin/coupons"
+          active={isActive("/admin/coupons")}
         />
 
         <NavItem
           label="Transaction"
           icon={<CreditCard />}
-          href="/transactions"
-          active={isActive("/transactions")}
+          href="/admin/transactions"
+          active={isActive("/admin/transactions")}
         />
 
         <NavItem
           label="Finance"
           icon={<BarChart3 />}
-          href="/finance"
-          active={isActive("/finance")}
+          href="/admin/finance"
+          active={isActive("/admin/finance")}
         />
 
         <NavItem
           label="Support"
           icon={<Headset />}
-          href="/support"
-          active={isActive("/support")}
+          href="/admin/support"
+          active={isActive("/admin/support")}
         />
 
         {/* Separator Label */}
@@ -148,24 +148,24 @@ export default function AdminSidebar() {
         </div>
 
         <NavItem
-          label="Add Cars"
+          label="Posting"
           icon={<PlusCircle />}
-          href="/cars/add"
-          active={isActive("/cars/add")}
+          href="/admin/cars/posting"
+          active={isActive("/admin/cars/posting")}
         />
 
         <NavItem
           label="Cars List"
           icon={<List />}
-          href="/cars"
-          active={isActive("/cars")}
+          href="/admin/cars"
+          active={isActive("/admin/cars")}
         />
 
         <NavItem
           label="Car Reviews"
           icon={<MessageSquare />}
-          href="/cars/reviews"
-          active={isActive("/cars/reviews")}
+          href="/admin/cars/reviews"
+          active={isActive("/admin/cars/reviews")}
         />
       </div>
 

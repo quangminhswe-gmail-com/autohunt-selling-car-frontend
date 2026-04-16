@@ -34,7 +34,7 @@ export default function LoginPage() {
       setSuccess("Login successful. Redirecting...");
       setTimeout(() => {
         if (data.user?.role === "admin") {
-          router.push("/dashboard");
+          router.push("/admin/dashboard");
         } else {
           router.push("/");
         }
