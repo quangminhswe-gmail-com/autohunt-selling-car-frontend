@@ -32,7 +32,13 @@ export default function LoginPage() {
       localStorage.setItem("token", data.accessToken || "");
       window.dispatchEvent(new Event("authChange"));
       setSuccess("Login successful. Redirecting...");
-      setTimeout(() => router.push("/profile"), 1000);
+      setTimeout(() => {
+        if (data.user?.role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/");
+        }
+      }, 1000);
     } catch (err) {
       console.error("Login error:", err);
       setError((err as Error).message || "Login failed");
