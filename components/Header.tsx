@@ -5,12 +5,31 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BellIcon } from "./icons/Icons";
+import { apiClient } from "@/app/utils/api";
+
+interface Notification {
+  _id: string;
+  title: string;
+  message: string;
+  targetRole: string;
+  createdAt: string;
+  createdBy: {
+    _id: string;
+    fullName?: string;
+    email?: string;
+  };
+}
 
 export default function Header() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [open, setOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [seenNotificationIds, setSeenNotificationIds] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateAuthState = () => {
@@ -28,6 +47,65 @@ export default function Header() {
       window.removeEventListener("storage", updateAuthState);
     };
   }, []);
+
+  // Load seen notification IDs from localStorage on mount
+  useEffect(() => {
+    const savedSeenIds = localStorage.getItem("seenNotificationIds");
+    if (savedSeenIds) {
+      try {
+        setSeenNotificationIds(new Set(JSON.parse(savedSeenIds)));
+      } catch (err) {
+        console.error("Error loading seen notification IDs:", err);
+      }
+    }
+  }, []);
+
+  // Fetch notifications when notification panel opens
+  useEffect(() => {
+    if (notificationOpen && isLoggedIn) {
+      fetchNotifications();
+    }
+  }, [notificationOpen, isLoggedIn]);
+
+  const fetchNotifications = async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      setLoadingNotifications(true);
+      const data = await apiClient<Notification[]>("/notifications", {
+        method: "GET",
+      });
+      const fetchedNotifications = Array.isArray(data) ? data : [];
+      setNotifications(fetchedNotifications);
+
+      // Mark all fetched notifications as seen
+      const fetchedIds = new Set(seenNotificationIds);
+      fetchedNotifications.forEach((notification) => {
+        fetchedIds.add(notification._id);
+      });
+      setSeenNotificationIds(fetchedIds);
+      localStorage.setItem("seenNotificationIds", JSON.stringify(Array.from(fetchedIds)));
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      setNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  // Close notification panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(e.target as Node)) {
+        setNotificationOpen(false);
+      }
+    };
+
+    if (notificationOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [notificationOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -74,13 +152,79 @@ export default function Header() {
             <div className="hidden md:block h-6 w-px bg-gray-300" />
 
             {/* Notification Bell */}
-            <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors relative">
-              <BellIcon className="w-6 h-6 text-black" />
-              {/* Notification Badge - placeholder for now */}
-              {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
-              </span> */}
-            </button>
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => {
+                  if (isLoggedIn) {
+                    setNotificationOpen(!notificationOpen);
+                  } else {
+                    router.push("/login");
+                  }
+                }}
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors relative"
+              >
+                <BellIcon className="w-6 h-6 text-black" />
+                {notifications.some((n) => !seenNotificationIds.has(n._id)) && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {notifications.filter((n) => !seenNotificationIds.has(n._id)).length > 9
+                      ? "9+"
+                      : notifications.filter((n) => !seenNotificationIds.has(n._id)).length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Panel */}
+              {notificationOpen && isLoggedIn && (
+                <div className="absolute right-0 mt-3 w-96 rounded-xl bg-white shadow-xl border border-gray-100 overflow-hidden animate-fadeIn z-50">
+                  {/* Header */}
+                  <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  </div>
+
+                  {/* Caret */}
+                  <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l border-t border-gray-100 rotate-45" />
+
+                  {/* Notification List */}
+                  <div className="max-h-96 overflow-y-auto">
+                    {loadingNotifications ? (
+                      <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                        Loading notifications...
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                        No new notifications
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification._id}
+                          className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer"
+                        >
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                            <div className="flex-grow min-w-0">
+                              <h4 className="font-semibold text-sm text-gray-900">
+                                {notification.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(notification.createdAt).toLocaleDateString()} at{" "}
+                                {new Date(notification.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Dropdown */}
             <div className="relative" ref={dropdownRef}>
