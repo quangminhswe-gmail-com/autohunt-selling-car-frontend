@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Filter, MessageSquare, CheckCircle, 
   Clock, AlertCircle, Pencil, X 
@@ -25,6 +25,14 @@ const capitalize = (str: string) => {
   return formattedStr.charAt(0).toUpperCase() + formattedStr.slice(1);
 };
 
+interface SupportMessage {
+  _id: string;
+  message: string;
+  senderRole: 'customer' | 'admin';
+  createdAt: string;
+  attachments?: string[];
+}
+
 export default function SupportPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [userMap, setUserMap] = useState<Record<string, any>>({});
@@ -42,6 +50,9 @@ export default function SupportPage() {
   const [replyingTicketId, setReplyingTicketId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
   const [isReplying, setIsReplying] = useState(false);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   // --- STATE MODAL EDIT STATUS ---
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -95,6 +106,12 @@ export default function SupportPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   // --- HANDLER: CHUYỂN SEARCH VÀ FILTER ---
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -107,10 +124,21 @@ export default function SupportPage() {
   };
 
   // --- HANDLER: REPLY ---
-  const openReplyModal = (id: string) => {
+  const openReplyModal = async (id: string) => {
     setReplyingTicketId(id);
     setReplyMessage("");
     setIsReplyModalOpen(true);
+    
+    // Load messages for this ticket
+    try {
+      setLoadingMessages(true);
+      const data = await apiClient<SupportMessage[]>(`/admin/support/${id}/messages`);
+      setMessages(data);
+    } catch (err) {
+      console.error("Error loading messages:", err);
+    } finally {
+      setLoadingMessages(false);
+    }
   };
 
   const handleReplySubmit = async (e: React.FormEvent) => {
@@ -136,11 +164,14 @@ export default function SupportPage() {
         throw new Error(errorData.message || 'Failed to send reply');
       }
 
-      setIsReplyModalOpen(false);
+      // Reload messages to show the new reply
+      const data = await apiClient<SupportMessage[]>(`/admin/support/${replyingTicketId}/messages`);
+      setMessages(data);
+      
+      setReplyMessage("");
       setTickets(prev => prev.map(t => 
         t._id === replyingTicketId ? { ...t, status: 'in_process' } : t
       ));
-      alert("Reply sent successfully!");
 
     } catch (err: any) {
       console.error("Reply error:", err);
@@ -402,36 +433,87 @@ export default function SupportPage() {
         {/* --- MODAL TRẢ LỜI TICKET --- */}
         {isReplyModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                     <div className="bg-white border-b border-gray-100 p-5 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-emerald-900">Reply to Customer</h2>
+                        <h2 className="text-lg font-bold text-emerald-900">Support Conversation</h2>
                         <button onClick={() => setIsReplyModalOpen(false)} className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors">
                             <X size={20} />
                         </button>
                     </div>
-                    <form onSubmit={handleReplySubmit} className="p-6 space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Reply Message</label>
-                            <textarea 
-                                required 
-                                rows={5}
-                                value={replyMessage} 
-                                onChange={(e) => setReplyMessage(e.target.value)} 
-                                placeholder="Enter your reply message here..."
-                                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all resize-none" 
-                            />
-                            <p className="text-[11px] text-gray-400 mt-2">* The ticket status will automatically change to "In Process" after replying.</p>
+                    
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {/* Messages Section */}
+                        <div className="flex-1 p-6 overflow-hidden flex flex-col">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex-shrink-0">Conversation History</h3>
+                            
+                            {loadingMessages ? (
+                                <div className="flex justify-center py-8 flex-1">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                                </div>
+                            ) : (
+                                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-2 space-y-4 min-h-0">
+                                    {messages.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-8">No messages yet. Start the conversation.</p>
+                                    ) : (
+                                        messages.map((message) => (
+                                            <div key={message._id} className={`flex ${message.senderRole === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                                                    message.senderRole === 'admin' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                                                }`}>
+                                                    <p className="text-sm">{message.message}</p>
+                                                    <p className={`text-[10px] mt-1 ${message.senderRole === 'admin' ? 'text-emerald-100' : 'text-gray-400'}`}>
+                                                        {formatDate(message.createdAt)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button type="button" onClick={() => setIsReplyModalOpen(false)} className="px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={isReplying} className="px-5 py-2 text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-lg shadow-sm shadow-blue-200 transition-colors disabled:opacity-50 flex items-center gap-2">
-                                {isReplying ? 'Sending...' : 'Send Reply'}
-                            </button>
-                        </div>
-                    </form>
+                        {/* Reply Form */}
+                        {(() => {
+                          const currentTicket = tickets.find(t => t._id === replyingTicketId);
+                          const canReply = currentTicket && currentTicket.status !== 'resolved' && currentTicket.status !== 'closed';
+                          
+                          return canReply ? (
+                            <div className="border-t border-gray-100 p-6">
+                                <form onSubmit={handleReplySubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Your Reply</label>
+                                        <textarea 
+                                            required 
+                                            rows={3}
+                                            value={replyMessage} 
+                                            onChange={(e) => setReplyMessage(e.target.value)} 
+                                            placeholder="Type your reply message here..."
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all resize-none" 
+                                        />
+                                        <p className="text-[11px] text-gray-400 mt-2">* The ticket status will automatically change to "In Process" after replying.</p>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <button type="button" onClick={() => setIsReplyModalOpen(false)} className="px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors">
+                                            Close
+                                        </button>
+                                        <button type="submit" disabled={isReplying || !replyMessage.trim()} className="px-5 py-2 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg shadow-sm shadow-emerald-200 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                            {isReplying ? 'Sending...' : 'Send Reply'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                          ) : (
+                            <div className="border-t border-gray-100 p-6">
+                                <div className="text-center py-4">
+                                    <p className="text-gray-500 text-sm">
+                                        This ticket is {currentTicket?.status === 'resolved' ? 'resolved' : 'closed'} and cannot be replied to.
+                                    </p>
+                                </div>
+                            </div>
+                          );
+                        })()}
+                    </div>
                 </div>
             </div>
         )}

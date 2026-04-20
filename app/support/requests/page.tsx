@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -21,7 +21,7 @@ interface SupportRequest {
 interface SupportMessage {
   _id: string;
   message: string;
-  senderType: 'customer' | 'admin';
+  senderRole: 'customer' | 'admin';
   createdAt: string;
   attachments?: string[];
 }
@@ -35,10 +35,17 @@ export default function SupportRequestsPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     loadRequests();
   }, []);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const loadRequests = async () => {
     try {
@@ -53,16 +60,20 @@ export default function SupportRequestsPage() {
     }
   };
 
-  const loadMessages = async (requestId: string) => {
+  const loadMessages = async (requestId: string, showLoading = true) => {
     try {
-      setLoadingMessages(true);
+      if (showLoading) {
+        setLoadingMessages(true);
+      }
       const data = await apiClient<SupportMessage[]>(`/support/${requestId}/messages`);
       setMessages(data);
     } catch (err) {
       console.error("Error loading messages:", err);
       showErrorNotification("Failed to Load Messages", (err as Error).message || "Failed to load messages");
     } finally {
-      setLoadingMessages(false);
+      if (showLoading) {
+        setLoadingMessages(false);
+      }
     }
   };
 
@@ -84,8 +95,8 @@ export default function SupportRequestsPage() {
       showSuccessNotification("Message Sent!", "Your reply has been sent successfully.");
       setNewMessage("");
 
-      // Reload messages to show the new message
-      await loadMessages(selectedRequest._id);
+      // Reload messages to show the new message without flashing the panel
+      await loadMessages(selectedRequest._id, false);
     } catch (err) {
       console.error("Error sending message:", err);
       showErrorNotification("Failed to Send Message", (err as Error).message || "Failed to send message");
@@ -342,24 +353,24 @@ export default function SupportRequestsPage() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-6">
+                  <div className="border-t pt-6 flex flex-col gap-4">
                     <h3 className="text-black font-semibold mb-4" >Conversation</h3>
                     {loadingMessages ? (
                       <div className="flex justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
                       </div>
                     ) : (
-                      <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto px-2">
+                      <div ref={messagesContainerRef} className="space-y-4 h-[250px] overflow-y-auto px-2">
                         {messages.length === 0 ? (
                           <p className="text-gray-500 text-center py-8">No messages yet. We'll respond soon.</p>
                         ) : (
                           messages.map((message) => (
-                            <div key={message._id} className={`flex ${message.senderType === 'customer' ? 'justify-end' : 'justify-start'}`}>
+                            <div key={message._id} className={`flex ${message.senderRole === 'customer' ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                                message.senderType === 'customer' ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                                message.senderRole === 'customer' ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'
                               }`}>
                                 <p className="text-sm">{message.message}</p>
-                                <p className={`text-[10px] mt-1 ${message.senderType === 'customer' ? 'text-teal-100' : 'text-gray-400'}`}>
+                                <p className={`text-[10px] mt-1 ${message.senderRole === 'customer' ? 'text-teal-100' : 'text-gray-400'}`}>
                                   {formatDate(message.createdAt)}
                                 </p>
                               </div>
@@ -370,7 +381,7 @@ export default function SupportRequestsPage() {
                     )}
 
                     {/* Reply Form */}
-                    {selectedRequest.status.toLowerCase() !== 'closed' && (
+                    {selectedRequest.status.toLowerCase() !== 'closed' && selectedRequest.status.toLowerCase() !== 'resolved' && (
                     <div className="border-t pt-4">
                         
                         <div className="flex items-center gap-3"> 
