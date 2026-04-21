@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -43,7 +43,7 @@ interface AiVehicle {
   price?: number;
 }
 
-export default function AiVehicleSearchPage() {
+function AiVehicleSearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('query') || '';
 
@@ -341,5 +341,32 @@ export default function AiVehicleSearchPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function AiVehicleSearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="ai-orb ai-orb-1" />
+            <div className="ai-orb ai-orb-2" />
+            <div className="ai-grid" />
+          </div>
+          <div className="relative z-10">
+            <Header />
+            <main className="max-w-7xl mx-auto px-4 py-10">
+              <div className="rounded-2xl border border-white/20 bg-white/5 p-10 text-center text-slate-200">
+                Loading AI search...
+              </div>
+            </main>
+            <Footer />
+          </div>
+        </div>
+      }
+    >
+      <AiVehicleSearchContent />
+    </Suspense>
   );
 }
