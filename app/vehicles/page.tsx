@@ -364,10 +364,33 @@ export default function VehiclesPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Browse Vehicles</h1>
-          <p className="text-gray-600">
-            {filteredPostings.length} vehicle{filteredPostings.length !== 1 ? 's' : ''} available
-          </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Browse Vehicles</h1>
+              <p className="text-gray-600">
+                {filteredPostings.length} vehicle{filteredPostings.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
+            <Link
+              href="/vehicles/ai"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium hover:from-cyan-400 hover:to-indigo-400 transition-colors shadow-sm"
+            >
+              <span>AI Search</span>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
