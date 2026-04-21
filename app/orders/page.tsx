@@ -105,70 +105,71 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 py-10 flex items-center justify-center">
-          <p className="text-gray-500">Loading your orders...</p>
-        </div>
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm">
+            <p className="text-gray-500">Loading your orders...</p>
+          </div>
+        </main>
         <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Orders</h1>
-          <p className="text-gray-600">Track and manage all your vehicle purchase orders</p>
-        </div>
-
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 text-sm">
-            {error}
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 py-10">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Orders</h1>
+            <p className="text-gray-600">Track and manage all your vehicle purchase orders</p>
           </div>
-        )}
 
-        {orders.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-              />
-            </svg>
-            <h3 className="mt-2 text-lg font-semibold text-gray-900">No orders yet</h3>
-            <p className="mt-1 text-gray-600">
-              Start shopping by browsing our vehicles and place your first order.
-            </p>
-            <Link
-              href="/vehicle"
-              className="mt-4 inline-block px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold hover:bg-[#005447] transition"
-            >
-              Browse Vehicles
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {orders.map((order) => (
-              <div
-                key={order._id}
-                className="rounded-lg border border-gray-200 bg-white overflow-hidden hover:shadow-lg transition"
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          {orders.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <div className="buffer p-6">
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    {/* Vehicle Info */}
-                    <div className="flex gap-4 flex-1">
-                      <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+              <h3 className="mt-2 text-lg font-semibold text-gray-900">No orders yet</h3>
+              <p className="mt-1 text-gray-600">
+                Start shopping by browsing our vehicles and place your first order.
+              </p>
+              <Link
+                href="/vehicle"
+                className="mt-4 inline-block px-6 py-2 bg-[#006557] text-white rounded-lg font-semibold hover:bg-[#005447] transition"
+              >
+                Browse Vehicles
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div
+                  key={order._id}
+                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex gap-4 flex-1 min-w-0">
+                      <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 border border-gray-100">
                         {order.vehicleId.images && order.vehicleId.images.length > 0 ? (
                           <img
                             src={order.vehicleId.images[0]}
@@ -176,35 +177,40 @@ export default function OrdersPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
                             No Image
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 truncate">
                           {order.vehicleId.make} {order.vehicleId.model}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-1">
                           {order.postingId?.title || `${order.vehicleId.make} ${order.vehicleId.model}`}
                         </p>
-                        <div className="mt-2 text-sm">
+                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                           <p className="text-gray-700">
-                            Agreed Price: <span className="font-semibold">₫{order.agreedPrice.toLocaleString()}</span>
+                            Agreed Price:{' '}
+                            <span className="font-semibold text-[#006557]">
+                              ₫{order.agreedPrice.toLocaleString()}
+                            </span>
                           </p>
                           {order.depositAmount > 0 && (
                             <p className="text-gray-700">
-                              Deposit: <span className="font-semibold">₫{order.depositAmount.toLocaleString()}</span>
+                              Deposit:{' '}
+                              <span className="font-semibold">
+                                ₫{order.depositAmount.toLocaleString()}
+                              </span>
                             </p>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Status Info */}
-                    <div className="flex flex-col items-end gap-3 md:ml-4">
-                      <div className="flex gap-2 flex-wrap justify-end">
+                    <div className="flex flex-col gap-3 md:items-end md:ml-4">
+                      <div className="flex gap-2 flex-wrap md:justify-end">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                             order.paymentStatus
@@ -228,24 +234,24 @@ export default function OrdersPage() {
                         </span>
                       </div>
 
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 md:text-right">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </p>
 
                       <Link
                         href={`/orders/${order._id}`}
-                        className="px-4 py-2 bg-[#006557] text-white rounded-lg text-sm font-semibold hover:bg-[#005447] transition"
+                        className="inline-flex items-center justify-center px-4 py-2 bg-[#006557] text-white rounded-lg text-sm font-semibold hover:bg-[#005447] transition"
                       >
                         View Details
                       </Link>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
 
       <Footer />
     </div>

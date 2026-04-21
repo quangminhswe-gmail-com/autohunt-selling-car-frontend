@@ -304,6 +304,16 @@ export default function VehicleDetailsPage() {
   }
 
   const vehicle = posting.vehicle;
+  const descriptionText = (
+    posting.description ||
+    vehicle.description ||
+    ''
+  ).trim();
+  const shouldTruncateDescription = descriptionText.length > 200;
+  const displayedDescription =
+    showFullDescription || !shouldTruncateDescription
+      ? descriptionText || 'No description available.'
+      : `${descriptionText.slice(0, 200)}...`;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -402,17 +412,17 @@ export default function VehicleDetailsPage() {
               </h3>
 
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                {showFullDescription
-                  ? posting.description || vehicle.description
-                  : (posting.description || vehicle.description).slice(0, 200) + '...'}
+                {displayedDescription}
               </p>
 
-              <button
-                onClick={() => setShowFullDescription(!showFullDescription)}
-                className="text-[#006557] text-sm mt-3 font-medium hover:text-[#005548] transition-colors"
-              >
-                {showFullDescription ? 'Show less' : 'Read more'}
-              </button>
+              {shouldTruncateDescription && (
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-[#006557] text-sm mt-3 font-medium hover:text-[#005548] transition-colors"
+                >
+                  {showFullDescription ? 'Show less' : 'Read more'}
+                </button>
+              )}
             </div>
           </div>
 
