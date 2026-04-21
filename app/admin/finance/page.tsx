@@ -204,7 +204,7 @@ export default function FinancialPage() {
                                 <td className="p-4 text-sm text-gray-500">{item.date}</td>
                                 
                                 <td className={`p-4 text-sm font-bold text-right ${item.type === 'Revenue' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {item.type === 'Revenue' ? '+' : '-'}${item.amount.toLocaleString()}
+                                    {item.type === 'Revenue' ? '+' : '-'}₫{item.amount.toLocaleString()}
                                 </td>
                             </tr>
                         ))}

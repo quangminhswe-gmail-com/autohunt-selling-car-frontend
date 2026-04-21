@@ -18,7 +18,7 @@ const transactions = Array(10).fill(null).map((_, i) => ({
     avatar: `https://i.pravatar.cc/150?u=${i + 20}`
   },
   description: i % 3 === 0 ? 'Premium Listing Fee' : (i % 3 === 1 ? 'Dealer Subscription (Monthly)' : 'Push to Top Service'),
-  amount: i % 3 === 1 ? '$500.00' : '$25.00',
+  amount: i % 3 === 1 ? '₫12,000,000' : '₫600,000',
   method: i % 2 === 0 ? 'Credit Card' : 'Bank Transfer',
   status: i % 4 === 0 ? 'Pending' : (i % 4 === 1 ? 'Failed' : 'Paid'),
   date: 'Feb 03, 2026',

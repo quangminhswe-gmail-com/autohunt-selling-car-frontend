@@ -140,13 +140,13 @@ export default function SellerOrdersPage() {
                   <div className="flex flex-col md:flex-row md:justify-between gap-4">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">
-                        {order.vehicleId.make} {order.vehicleId.model}
+                        {order.vehicleId?.make} {order.vehicleId?.model}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {order.postingId?.title || `${order.vehicleId.make} ${order.vehicleId.model}`}
+                        {order.postingId?.title || `${order.vehicleId?.make} ${order.vehicleId?.model}`}
                       </p>
                       <p className="text-sm mt-2 text-gray-700">
-                        Buyer order: ${order.agreedPrice.toLocaleString()} | Deposit: ${order.depositAmount.toLocaleString()}
+                        Buyer order: ₫{order.agreedPrice.toLocaleString()} | Deposit: ₫{order.depositAmount.toLocaleString()}
                       </p>
                     </div>
 

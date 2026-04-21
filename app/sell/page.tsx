@@ -88,7 +88,7 @@ export default function SellCarPage() {
     title: '',
     description: '',
     price: '',
-    currency: 'USD',
+    currency: 'VND',
     locationCity: '',
     locationDistrict: '',
     locationAddress: '',
@@ -677,7 +677,7 @@ export default function SellCarPage() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="USD">USD ($)</option>
+                        <option value="VND">VND (₫)</option>
                       </select>
                     </div>
                   </div>

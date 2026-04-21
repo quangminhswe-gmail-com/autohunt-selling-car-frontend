@@ -441,9 +441,9 @@ export default function VehiclesPage() {
 
                         {(minPrice || maxPrice) && (
                         <div className="text-xs font-semibold py-2 px-3 bg-gray-50 rounded-md text-blue-600">
-                            {minPrice ? `$${Number(minPrice).toLocaleString()}` : '$0'} 
+                            {minPrice ? `₫${Number(minPrice).toLocaleString()}` : '₫0'} 
                             <span className="text-gray-400 mx-2">to</span>
-                            {maxPrice ? `$${Number(maxPrice).toLocaleString()}` : 'Any'}
+                            {maxPrice ? `₫${Number(maxPrice).toLocaleString()}` : 'Any'}
                         </div>
                         )}
                     </div>
@@ -798,6 +798,7 @@ export default function VehiclesPage() {
                     onContact={() => startConversationWithPosting(posting._id)}
                     onBuy={(id) => (window.location.href = `/vehicle/${id}/buy`) }
                     variant="grid"
+                    currency="VND"
                   >
                   </CarCard>
                 ))}
@@ -849,7 +850,7 @@ export default function VehiclesPage() {
                     {/* Price and Buttons */}
                     <div className="p-4 flex flex-col items-end justify-between">
                       <p className="text-xl font-bold text-[#006557]">
-                        ${posting.price.toLocaleString()}
+                        ₫{posting.price.toLocaleString()}
                       </p>
                       <div className="flex gap-2 mt-2">
                         <button

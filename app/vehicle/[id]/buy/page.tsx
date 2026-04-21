@@ -252,7 +252,7 @@ export default function VehicleBuyPage() {
                 <div>Make/model: {posting.vehicle.make} {posting.vehicle.model}</div>
                 <div>Year: {posting.vehicle.yearOfManufacture}</div>
                 <div>Mileage: {posting.vehicle.mileage.toLocaleString()} km</div>
-                <div>Listing price: ${posting.price.toLocaleString()}</div>
+                <div>Listing price: ₫{posting.price.toLocaleString()}</div>
                 <div>Location: {posting.locationCity || 'N/A'}</div>
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function VehicleBuyPage() {
                   disabled={submitting}
                   className="w-full rounded-lg bg-blue-600 text-white py-3 font-semibold hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
-                  {submitting ? 'Placing order...' : `Place Order (${posting.currency || '$'}${posting.price.toLocaleString()})`}
+                  {submitting ? 'Placing order...' : `Place Order (${posting.currency || '₫'}${posting.price.toLocaleString()})`}
                 </button>
               </form>
             </div>

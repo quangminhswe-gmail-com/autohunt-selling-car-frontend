@@ -15,6 +15,7 @@ export interface CarCardProps {
   onContact?: (id: string) => void;
   onBuy?: (id: string) => void;
   variant?: 'grid' | 'list';
+  currency?: string;
 }
 
 export default function CarCard({
@@ -31,8 +32,21 @@ export default function CarCard({
   onContact,
   onBuy,
   variant = 'grid',
+  currency = 'VND',
 }: CarCardProps) {
   const cropImage = image || '/default-car.png';
+  
+  // Get currency symbol
+  const getCurrencySymbol = (curr: string) => {
+    switch (curr?.toUpperCase()) {
+      case 'VND':
+        return '₫';
+      default:
+        return '₫';
+    }
+  };
+  
+  const currencySymbol = getCurrencySymbol(currency);
 
   if (variant === 'list') {
     return (
@@ -56,7 +70,7 @@ export default function CarCard({
             <p>Location: {location ?? 'Unknown'}</p>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <p className="text-2xl font-bold text-[#006557]">${price.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-[#006557]">{currencySymbol}{price.toLocaleString()}</p>
             <div className="flex gap-2">
               <button
                 onClick={(e) => {
@@ -122,8 +136,8 @@ export default function CarCard({
             </span>
           </div>
 
-          <div className="flex items-center justify-between mb-4 gap-3">
-            <p className="text-2xl font-bold text-[#006557]">${price.toLocaleString()}</p>
+          <div className="flex flex-col gap-2 mb-4">
+            <p className="text-lg font-bold text-[#006557]">{currencySymbol}{price.toLocaleString()}</p>
             <div className="flex items-center gap-1 text-sm text-gray-600">
               <svg width="11" height="14" viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5.89805 13.65C7.30078 11.8945 10.5 7.63984 10.5 5.25C10.5 2.35156 8.14844 0 5.25 0C2.35156 0 0 2.35156 0 5.25C0 7.63984 3.19922 11.8945 4.60195 13.65C4.93828 14.0684 5.56172 14.0684 5.89805 13.65ZM5.25 3.5C5.71413 3.5 6.15925 3.68437 6.48744 4.01256C6.81563 4.34075 7 4.78587 7 5.25C7 5.71413 6.81563 6.15925 6.48744 6.48744C6.15925 6.81563 5.71413 7 5.25 7C4.78587 7 4.34075 6.81563 4.01256 6.48744C3.68437 6.15925 3.5 5.71413 3.5 5.25C3.5 4.78587 3.68437 4.34075 4.01256 4.01256C4.34075 3.68437 4.78587 3.5 5.25 3.5Z" fill="#6B7280"/>

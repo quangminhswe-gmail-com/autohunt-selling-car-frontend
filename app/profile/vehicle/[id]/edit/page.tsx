@@ -92,7 +92,7 @@ export default function EditVehiclePage() {
     title: '',
     description: '',
     price: '',
-    currency: 'USD',
+    currency: 'VND',
     locationCity: '',
     locationDistrict: '',
     locationAddress: '',
@@ -141,12 +141,12 @@ export default function EditVehiclePage() {
           transmission: found.transmission || '',
           type: found.type || '',
           fuelType: found.fuelType || '',
-          condition: found.condition || 'used',
+          condition: 'used',
           vehicleFeatures: found.features || [],
           title: linkedPosting?.title || '',
           description: linkedPosting?.description || found.description || '',
           price: linkedPosting?.price || found.price || '',
-          currency: linkedPosting?.currency || 'USD',
+          currency: linkedPosting?.currency || 'VND',
           locationCity: linkedPosting?.locationCity || '',
           locationDistrict: linkedPosting?.locationDistrict || '',
           locationAddress: linkedPosting?.locationAddress || '',
@@ -800,7 +800,7 @@ export default function EditVehiclePage() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="USD">USD ($)</option>
+                        <option value="VND">VND (₫)</option>
                       </select>
                     </div>
                   </div>

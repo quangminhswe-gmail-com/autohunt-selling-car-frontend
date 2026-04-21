@@ -169,7 +169,7 @@ export default function OverviewReportPage() {
                             <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="p-4 font-bold text-slate-700">{sale.car}</td>
                                 <td className="p-4 text-gray-600">{sale.buyer}</td>
-                                <td className="p-4 font-bold text-slate-800">${sale.price.toLocaleString()}</td>
+                                <td className="p-4 font-bold text-slate-800">₫{sale.price.toLocaleString()}</td>
                                 <td className="p-4">
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                         sale.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :

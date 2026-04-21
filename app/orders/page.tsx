@@ -191,11 +191,11 @@ export default function OrdersPage() {
                         </p>
                         <div className="mt-2 text-sm">
                           <p className="text-gray-700">
-                            Agreed Price: <span className="font-semibold">${order.agreedPrice.toLocaleString()}</span>
+                            Agreed Price: <span className="font-semibold">₫{order.agreedPrice.toLocaleString()}</span>
                           </p>
                           {order.depositAmount > 0 && (
                             <p className="text-gray-700">
-                              Deposit: <span className="font-semibold">${order.depositAmount.toLocaleString()}</span>
+                              Deposit: <span className="font-semibold">₫{order.depositAmount.toLocaleString()}</span>
                             </p>
                           )}
                         </div>
