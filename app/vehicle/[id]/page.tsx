@@ -423,17 +423,17 @@ export default function VehicleDetailsPage() {
             <div className="bg-gradient-to-br from-[#006557] to-[#005548] rounded-xl p-6 shadow-lg text-white">
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 text-xs bg-white/20 text-white rounded-full font-bold uppercase tracking-wide">
-                  {vehicle.condition}
+                  {posting?.vehicle?.condition}
                 </span>
                 <div className="text-right">
                   <span className="text-3xl font-bold">
-                    ${vehicle.price.toLocaleString()}
+                    ₫{posting?.price.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               <h2 className="text-xl font-semibold mb-4">
-                {vehicle.yearOfManufacture} {vehicle.make} {vehicle.model}
+                {posting?.vehicle?.yearOfManufacture} {posting?.vehicle?.make} {posting?.vehicle?.model}
               </h2>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
@@ -673,7 +673,7 @@ export default function VehicleDetailsPage() {
                   <div className="flex items-center justify-between mb-4">
                     {/* Price */}
                     <p className="text-2xl font-bold text-[#006557]">
-                      ${car.price.toLocaleString()}
+                      ₫{car.price.toLocaleString()}
                     </p>
 
                     {/* Location */}

@@ -500,14 +500,14 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm text-gray-600">Agreed Price</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${order.agreedPrice?.toLocaleString('en-US')}
+                    ₫{order.agreedPrice?.toLocaleString('en-US')}
                   </p>
                 </div>
                 {order.depositAmount > 0 && (
                   <div>
                     <p className="text-sm text-gray-600">Deposit</p>
                     <p className="font-semibold text-gray-900">
-                      ${order.depositAmount?.toLocaleString('en-US')}
+                      ₫{order.depositAmount?.toLocaleString('en-US')}
                     </p>
                   </div>
                 )}

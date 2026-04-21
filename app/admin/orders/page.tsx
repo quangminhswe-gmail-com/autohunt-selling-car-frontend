@@ -190,7 +190,7 @@ export default function OrderManagementPage() {
                                 </td>
                                 
                                 <td className="p-4 text-sm font-bold text-slate-800">
-                                    ${order.agreedPrice.toLocaleString()}
+                                    ₫{order.agreedPrice.toLocaleString()}
                                 </td>
                                 
                                 <td className="p-4">

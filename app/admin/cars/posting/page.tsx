@@ -343,7 +343,7 @@ export default function PostManagementPage() {
                                                     <div className="flex items-center gap-2">
                                                         <Tag size={14} className="text-emerald-500 flex-shrink-0" />
                                                         <span className="font-bold text-emerald-700 text-sm">
-                                                            {post.price?.toLocaleString('en-US')} {post.currency || 'USD'}
+                                                            {post.price?.toLocaleString('en-US')} {post.currency || 'VND'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-xs text-gray-500">

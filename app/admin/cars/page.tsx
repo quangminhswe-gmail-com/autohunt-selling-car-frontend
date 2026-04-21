@@ -345,7 +345,7 @@ export default function VehicleManagementPage() {
                                                 </div>
                                             </td>
                                             <td className="p-4 align-middle">
-                                                <span className="text-sm font-bold text-emerald-600">${car.price?.toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-emerald-600">₫{car.price?.toLocaleString()}</span>
                                                 <div className="text-[10px] font-mono text-gray-400 mt-0.5">Plate: {car.licensePlate}</div>
                                             </td>
                                             <td className="p-4 align-middle text-center">
@@ -451,7 +451,7 @@ export default function VehicleManagementPage() {
                                 <input required type="number" name="mileage" value={formData.mileage} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all" />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Price ($)</label>
+                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Price (₫)</label>
                                 <input required type="number" name="price" value={formData.price} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all" />
                             </div>
                             <div>

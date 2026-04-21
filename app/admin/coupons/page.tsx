@@ -25,7 +25,7 @@ const promotions = [
     id: 2, 
     name: 'New Dealer Welcome', 
     code: 'DEALER_NEW', 
-    discount: '$20.00', 
+    discount: '₫500,000', 
     type: 'Fixed Amount',
     used: 120, 
     limit: 1000, 

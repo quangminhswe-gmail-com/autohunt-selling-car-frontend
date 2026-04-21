@@ -235,11 +235,11 @@ export default function AdminOrderDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-sm text-gray-500">Agreed Price</p>
-                  <p className="text-lg font-semibold text-gray-900">${order.agreedPrice?.toLocaleString() || 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">₫{order.agreedPrice?.toLocaleString() || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Deposit Amount</p>
-                  <p className="text-lg font-semibold text-gray-900">${order.depositAmount?.toLocaleString() || '0'}</p>
+                  <p className="text-lg font-semibold text-gray-900">₫{order.depositAmount?.toLocaleString() || '0'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Payment Method</p>

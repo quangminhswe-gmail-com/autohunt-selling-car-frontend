@@ -61,6 +61,7 @@ interface FeaturedCar {
   image: string;
   transmission: string;
   targetHref: string;
+  currency?: string;
 }
 
 const FEATURED_CAR_LIMIT = 8;
@@ -124,6 +125,7 @@ export default function HomePage() {
             image: posting.vehicle?.images?.[0] || '/default-car.png',
             transmission: posting.vehicle?.transmission || 'Unknown',
             targetHref: `/vehicle/${posting._id}`,
+            currency: 'VND',
           }));
 
         setSelectedCars(featured);
@@ -145,6 +147,7 @@ export default function HomePage() {
               image: vehicle.images?.[0] || '/default-car.png',
               transmission: vehicle.transmission || 'Unknown',
               targetHref: '/vehicles',
+              currency: 'VND',
             }));
           setSelectedCars(featured);
         } catch (fallbackErr) {
@@ -204,6 +207,7 @@ export default function HomePage() {
                   onContact={handleContactSeller}
                   onBuy={(id) => (window.location.href = `/vehicle/${id}/buy`)}
                   variant="grid"
+                  currency={car.currency}
                 />
               ))}
             </div>
