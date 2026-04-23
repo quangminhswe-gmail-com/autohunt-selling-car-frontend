@@ -54,6 +54,23 @@ interface UIMessage {
   time: string;
 }
 
+const SEEN_CONVERSATIONS_KEY = 'chat_seen_by_conversation';
+
+const markConversationAsSeen = (conversationId: string) => {
+  if (typeof window === 'undefined' || !conversationId) return;
+  const raw = localStorage.getItem(SEEN_CONVERSATIONS_KEY);
+  let seenMap: Record<string, string> = {};
+  if (raw) {
+    try {
+      seenMap = JSON.parse(raw);
+    } catch {
+      seenMap = {};
+    }
+  }
+  seenMap[conversationId] = new Date().toISOString();
+  localStorage.setItem(SEEN_CONVERSATIONS_KEY, JSON.stringify(seenMap));
+};
+
 const getCurrentUserId = () => {
   if (typeof window === 'undefined') return null;
   const token = localStorage.getItem('token');
@@ -161,6 +178,7 @@ export default function ConversationPage() {
       try {
         const data = await apiClient<MessageResponse[]>(`/chat/${conversationId}/messages`);
         setMessages(data.map((message) => mapMessage(message, userId)));
+        markConversationAsSeen(conversationId);
       } catch (err) {
         console.error('Failed to load messages', err);
         setError((err as Error).message || 'Unable to load messages');
@@ -208,6 +226,7 @@ export default function ConversationPage() {
             : conversation,
         ),
       );
+      markConversationAsSeen(conversationId);
     });
 
     setSocket(client);
