@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BellIcon } from "./icons/Icons";
 import { apiClient } from "@/app/utils/api";
@@ -30,6 +30,46 @@ export default function Header() {
   const [seenNotificationIds, setSeenNotificationIds] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!isLoggedIn) return;
+
+    try {
+      setLoadingNotifications(true);
+      const data = await apiClient<Notification[]>("/notifications", {
+        method: "GET",
+      });
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      setNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [isLoggedIn]);
+
+  const markNotificationsAsSeen = useCallback((items: Notification[]) => {
+    if (items.length === 0) return;
+
+    setSeenNotificationIds((prev) => {
+      let hasChanges = false;
+      const updatedSeen = new Set(prev);
+
+      items.forEach((notification) => {
+        if (!updatedSeen.has(notification._id)) {
+          hasChanges = true;
+          updatedSeen.add(notification._id);
+        }
+      });
+
+      if (!hasChanges) {
+        return prev;
+      }
+
+      localStorage.setItem("seenNotificationIds", JSON.stringify(Array.from(updatedSeen)));
+      return updatedSeen;
+    });
+  }, []);
 
   useEffect(() => {
     const updateAuthState = () => {
@@ -60,38 +100,28 @@ export default function Header() {
     }
   }, []);
 
-  // Fetch notifications when notification panel opens
+  // Fetch notifications on login and when panel opens
   useEffect(() => {
-    if (notificationOpen && isLoggedIn) {
+    if (isLoggedIn) {
       fetchNotifications();
     }
-  }, [notificationOpen, isLoggedIn]);
+  }, [isLoggedIn, notificationOpen, fetchNotifications]);
 
-  const fetchNotifications = async () => {
+  // Poll notifications in background for near real-time badge updates
+  useEffect(() => {
     if (!isLoggedIn) return;
-    
-    try {
-      setLoadingNotifications(true);
-      const data = await apiClient<Notification[]>("/notifications", {
-        method: "GET",
-      });
-      const fetchedNotifications = Array.isArray(data) ? data : [];
-      setNotifications(fetchedNotifications);
+    const timer = window.setInterval(() => {
+      fetchNotifications();
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [isLoggedIn, fetchNotifications]);
 
-      // Mark all fetched notifications as seen
-      const fetchedIds = new Set(seenNotificationIds);
-      fetchedNotifications.forEach((notification) => {
-        fetchedIds.add(notification._id);
-      });
-      setSeenNotificationIds(fetchedIds);
-      localStorage.setItem("seenNotificationIds", JSON.stringify(Array.from(fetchedIds)));
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setNotifications([]);
-    } finally {
-      setLoadingNotifications(false);
+  // Only mark notifications as seen when panel is actually opened
+  useEffect(() => {
+    if (notificationOpen && notifications.length > 0) {
+      markNotificationsAsSeen(notifications);
     }
-  };
+  }, [notificationOpen, notifications, markNotificationsAsSeen]);
 
   // Close notification panel when clicking outside
   useEffect(() => {

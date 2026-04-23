@@ -31,6 +31,8 @@ interface UIConversation {
   isOnline?: boolean;
 }
 
+const SEEN_CONVERSATIONS_KEY = 'chat_seen_by_conversation';
+
 const getCurrentUserId = () => {
   if (typeof window === 'undefined') return null;
   const token = localStorage.getItem('token');
@@ -98,6 +100,14 @@ export default function MessagesPage() {
       try {
         const data = await apiClient<ConversationResponse[]>('/chat/conversations');
         setConversations(data.map((conversation) => mapConversation(conversation, userId)));
+
+        const seenMap = data.reduce<Record<string, string>>((acc, conversation) => {
+          if (conversation._id && conversation.updatedAt) {
+            acc[conversation._id] = conversation.updatedAt;
+          }
+          return acc;
+        }, {});
+        localStorage.setItem(SEEN_CONVERSATIONS_KEY, JSON.stringify(seenMap));
       } catch (err) {
         console.error('Failed to load conversations', err);
         setError((err as Error).message || 'Unable to load conversations');
