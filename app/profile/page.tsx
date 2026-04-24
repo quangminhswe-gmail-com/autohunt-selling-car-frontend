@@ -220,6 +220,11 @@ export default function ProfilePage() {
     if (!originalData) return;
     try {
       const updateData: any = {};
+      const normalizedCurrentEmail = user.email.trim().toLowerCase();
+      const normalizedOriginalEmail = (originalData.email || '').trim().toLowerCase();
+      if (normalizedCurrentEmail !== normalizedOriginalEmail) {
+        updateData.email = normalizedCurrentEmail;
+      }
       if (user.firstName !== originalData.firstName) updateData.firstName = user.firstName;
       if (user.lastName !== originalData.lastName) updateData.lastName = user.lastName;
       if (user.phoneNumber !== originalData.phoneNumber) updateData.phoneNumber = user.phoneNumber;
@@ -232,13 +237,21 @@ export default function ProfilePage() {
           body: updateData,
         });
         setOriginalData({ ...originalData, ...updateData });
+        setUser((prev) => ({ ...prev, email: normalizedCurrentEmail }));
         showSuccessNotification('Success', 'Profile updated successfully!');
       } else {
         showInfoNotification('Info', 'No changes to save.');
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      showErrorNotification('Error', 'Failed to update profile.');
+      const message = (error as Error)?.message || 'Failed to update profile.';
+      if (message.toLowerCase().includes('email already exists')) {
+        showErrorNotification(
+          'Email is already in use',
+          'Please choose a different email address.',
+        );
+        return;
+      }
+      showErrorNotification('Error', message);
     }
   };
 
@@ -448,8 +461,8 @@ export default function ProfilePage() {
                         <input
                           type="email"
                           value={user.email}
-                          readOnly
-                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed"
+                          onChange={(e) => setUser({ ...user, email: e.target.value })}
+                          className="mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                         />
                       </label>
 

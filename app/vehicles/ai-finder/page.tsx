@@ -80,8 +80,6 @@ interface BuyerProfileForm {
   maxPrice: string;
   preferredFeatures: string;
   usagePurpose: string;
-  emailOptIn: boolean;
-  notifyEmail: string;
 }
 
 export default function AiFinderPage() {
@@ -94,6 +92,11 @@ export default function AiFinderPage() {
   const [error, setError] = useState<string | null>(null);
   const [showWaiting, setShowWaiting] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [showEmailPromptModal, setShowEmailPromptModal] = useState(false);
+  const [pendingSearchPayload, setPendingSearchPayload] = useState<any | null>(null);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [savingAlert, setSavingAlert] = useState(false);
+  const [emailPromptError, setEmailPromptError] = useState<string | null>(null);
   const [form, setForm] = useState<BuyerProfileForm>({
     preferredBrand: '',
     model: '',
@@ -103,8 +106,6 @@ export default function AiFinderPage() {
     maxPrice: '',
     preferredFeatures: '',
     usagePurpose: '',
-    emailOptIn: false,
-    notifyEmail: '',
   });
 
   const hasEnoughCriteria = useMemo(() => {
@@ -252,18 +253,38 @@ export default function AiFinderPage() {
     }
   };
 
+  const createBuyerAlert = async ({
+    payload,
+    emailOptIn,
+    notifyEmail,
+  }: {
+    payload: any;
+    emailOptIn: boolean;
+    notifyEmail?: string;
+  }) => {
+    await apiClient('/buyer-searches', {
+      method: 'POST',
+      body: {
+        ...payload,
+        emailOptIn,
+        notifyEmail: emailOptIn ? notifyEmail : undefined,
+      },
+    });
+    await fetchBuyerSearches();
+    setLastSavedAt(new Date().toLocaleString());
+  };
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!hasEnoughCriteria) {
       setError('Please fill at least brand, model, or body type.');
       return;
     }
-    if (form.emailOptIn && !form.notifyEmail.trim()) {
-      setError('Please enter an email address to receive match alerts.');
-      return;
-    }
 
     setError(null);
+    setEmailPromptError(null);
+    setShowEmailPromptModal(false);
+    setPendingSearchPayload(null);
     setSearching(true);
     setResults([]);
     setShowWaiting(false);
@@ -290,6 +311,12 @@ export default function AiFinderPage() {
       });
 
       const profileQuery = buildQueryFromProfile();
+      const buyerSearchPayload = {
+        query: profileQuery,
+        make: form.preferredBrand.trim() || undefined,
+        model: form.model.trim() || undefined,
+        yearOfManufacture: form.minYear.trim() ? Number(form.minYear) : undefined,
+      };
       const aiResponse = await apiClient<{ vehicles?: AiVehicle[] }>('/public/vehicle/ai-search', {
         method: 'POST',
         body: { query: profileQuery },
@@ -320,26 +347,21 @@ export default function AiFinderPage() {
           : [];
 
       if (matchedCandidates.length > 0) {
+        // Save buyer request even when there are immediate matches
+        // so backend can notify matched sellers (in-app + email).
+        await createBuyerAlert({
+          payload: buyerSearchPayload,
+          emailOptIn: false,
+        });
+
         const enriched = await Promise.all(
           matchedCandidates.map(async (posting) => ({ posting, seller: await readSellerFromPostingDetails(posting._id) }))
         );
         setResults(enriched);
       } else {
-        await apiClient('/buyer-searches', {
-          method: 'POST',
-          body: {
-            query: profileQuery,
-            make: form.preferredBrand.trim() || undefined,
-            model: form.model.trim() || undefined,
-            yearOfManufacture: form.minYear.trim() ? Number(form.minYear) : undefined,
-            emailOptIn: form.emailOptIn,
-            notifyEmail: form.emailOptIn ? form.notifyEmail.trim() : undefined,
-          },
-        });
-        await fetchBuyerSearches();
         setResults([]);
-        setShowWaiting(true);
-        setLastSavedAt(new Date().toLocaleString());
+        setPendingSearchPayload(buyerSearchPayload);
+        setShowEmailPromptModal(true);
       }
     } catch (err) {
       const message = (err as Error).message || 'AI flow failed.';
@@ -347,6 +369,55 @@ export default function AiFinderPage() {
       showErrorNotification('AI error', message);
     } finally {
       setSearching(false);
+    }
+  };
+
+  const saveAlertWithoutEmail = async () => {
+    if (!pendingSearchPayload) return;
+
+    setSavingAlert(true);
+    setEmailPromptError(null);
+    try {
+      await createBuyerAlert({
+        payload: pendingSearchPayload,
+        emailOptIn: false,
+      });
+      setShowEmailPromptModal(false);
+      setPendingSearchPayload(null);
+      setAlertEmail('');
+      setShowWaiting(true);
+    } catch (err) {
+      setEmailPromptError((err as Error).message || 'Failed to save alert request.');
+    } finally {
+      setSavingAlert(false);
+    }
+  };
+
+  const saveAlertWithEmail = async () => {
+    if (!pendingSearchPayload) return;
+
+    const normalizedEmail = alertEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setEmailPromptError('Please enter an email address.');
+      return;
+    }
+
+    setSavingAlert(true);
+    setEmailPromptError(null);
+    try {
+      await createBuyerAlert({
+        payload: pendingSearchPayload,
+        emailOptIn: true,
+        notifyEmail: normalizedEmail,
+      });
+      setShowEmailPromptModal(false);
+      setPendingSearchPayload(null);
+      setAlertEmail('');
+      setShowWaiting(true);
+    } catch (err) {
+      setEmailPromptError((err as Error).message || 'Failed to save email alert.');
+    } finally {
+      setSavingAlert(false);
     }
   };
 
@@ -461,25 +532,6 @@ export default function AiFinderPage() {
               placeholder="Usage purpose"
               className="px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700 md:col-span-2"
             />
-            <label className="md:col-span-2 flex items-center gap-2 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={form.emailOptIn}
-                onChange={(e) => setForm((prev) => ({ ...prev, emailOptIn: e.target.checked }))}
-                className="rounded border-slate-500 bg-slate-900"
-              />
-              Notify me by email when a matching car is available
-            </label>
-            {form.emailOptIn && (
-              <input
-                type="email"
-                value={form.notifyEmail}
-                onChange={(e) => setForm((prev) => ({ ...prev, notifyEmail: e.target.value }))}
-                disabled={searching || loadingData}
-                placeholder="your-email@example.com"
-                className="px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700 md:col-span-2"
-              />
-            )}
             <button
               type="submit"
               disabled={searching || loadingData}
@@ -506,11 +558,70 @@ export default function AiFinderPage() {
         {lastSavedAt && (
           <div className="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-3 text-emerald-100">
             Criteria saved successfully at {lastSavedAt}. You will receive a header notification when a suitable car is posted.
-            {form.emailOptIn && form.notifyEmail.trim() && (
-              <div className="mt-1 text-emerald-50/95">
-                We will also send an email alert to <strong>{form.notifyEmail.trim()}</strong> when a match is found.
+          </div>
+        )}
+
+        {showEmailPromptModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8">
+            <div className="w-full max-w-lg rounded-2xl border border-cyan-300/30 bg-slate-950 p-6 shadow-2xl">
+              <h3 className="text-xl font-semibold text-white">No matching car right now</h3>
+              <p className="mt-2 text-slate-300">
+                Do you want to receive an email alert when a matching car is posted?
+              </p>
+
+              <div className="mt-4">
+                <label className="block text-sm text-slate-200 mb-2">Email for alerts (optional)</label>
+                <input
+                  type="email"
+                  value={alertEmail}
+                  onChange={(e) => setAlertEmail(e.target.value)}
+                  disabled={savingAlert}
+                  placeholder="your-email@example.com"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700 text-white"
+                />
+                <p className="mt-2 text-xs text-slate-400">
+                  Leave blank and click "Save Without Email" if you only want in-app alert.
+                </p>
               </div>
-            )}
+
+              {emailPromptError && (
+                <div className="mt-3 rounded-lg border border-red-300/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+                  {emailPromptError}
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (savingAlert) return;
+                    setShowEmailPromptModal(false);
+                    setPendingSearchPayload(null);
+                    setAlertEmail('');
+                    setEmailPromptError(null);
+                  }}
+                  className="rounded-xl border border-slate-600 px-4 py-2 text-slate-200 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAlertWithoutEmail}
+                  disabled={savingAlert}
+                  className="rounded-xl border border-cyan-400/40 px-4 py-2 text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-60"
+                >
+                  Save Without Email
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAlertWithEmail}
+                  disabled={savingAlert}
+                  className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400 disabled:opacity-60"
+                >
+                  {savingAlert ? 'Saving...' : 'Save & Notify by Email'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
