@@ -373,6 +373,12 @@ export default function VehiclesPage() {
             </div>
             <div className="flex gap-2">
               <Link
+                href="/vehicles/ai-consultant"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:from-violet-400 hover:to-fuchsia-400 transition-colors shadow-sm"
+              >
+                <span>AI Consultant</span>
+              </Link>
+              <Link
                 href="/vehicles/ai"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium hover:from-cyan-400 hover:to-indigo-400 transition-colors shadow-sm"
               >
