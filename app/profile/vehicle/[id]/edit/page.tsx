@@ -773,6 +773,19 @@ export default function EditVehiclePage() {
                     <p className="text-sm text-gray-500 mt-1">{formData.title.length}/100</p>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      placeholder="Mô tả chi tiết về xe: tình trạng, lịch sử bảo dưỡng, nâng cấp/phụ kiện, giấy tờ..."
+                      rows={6}
+                      className="w-full px-4 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">{formData.description.length}/2000</p>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     <div>
@@ -1053,6 +1066,12 @@ export default function EditVehiclePage() {
                     <div>
                       <p className="text-gray-600 text-sm">Title</p>
                       <p className="font-medium text-gray-900">{formData.title || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Description</p>
+                      <p className="font-medium text-gray-900 whitespace-pre-wrap">
+                        {formData.description?.trim() ? formData.description : '-'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-600 text-sm">Location</p>

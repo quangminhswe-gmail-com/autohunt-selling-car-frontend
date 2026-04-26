@@ -459,7 +459,7 @@ export default function AiConsultantPage() {
                   {intentSummary}
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4">
+                {/* <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4">
                   <div className="text-sm font-semibold text-cyan-100">Mẹo nhanh</div>
                   <ul className="mt-2 space-y-2 text-sm text-cyan-50/90">
                     <li className="flex gap-2">
@@ -475,13 +475,13 @@ export default function AiConsultantPage() {
                       Nếu cần, hãy nhắn “so sánh 2 mẫu” để chốt nhanh.
                     </li>
                   </ul>
-                </div>
+                </div> */}
 
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                {/* <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs text-slate-400">
                     Ghi chú: Tên xe trong câu trả lời được lấy từ dữ liệu xe đang có trên website (database), không tự đặt tên.
                   </div>
-                </div>
+                </div> */}
               </div>
             </aside>
           </section>
@@ -496,7 +496,7 @@ export default function AiConsultantPage() {
               </div>
               {searchingDb && (
                 <span className="text-xs text-cyan-200 animate-pulse rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1">
-                  Đang đối chiếu database…
+                  Đang đối chiếu…
                 </span>
               )}
             </div>
