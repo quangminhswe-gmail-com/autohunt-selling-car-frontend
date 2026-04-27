@@ -378,12 +378,12 @@ export default function VehiclesPage() {
               >
                 <span>AI Consultant</span>
               </Link>
-              <Link
+              {/* <Link
                 href="/vehicles/ai"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium hover:from-cyan-400 hover:to-indigo-400 transition-colors shadow-sm"
               >
                 <span>AI Search</span>
-              </Link>
+              </Link> */}
               <Link
                 href="/vehicles/ai-finder"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium hover:from-emerald-400 hover:to-teal-400 transition-colors shadow-sm"

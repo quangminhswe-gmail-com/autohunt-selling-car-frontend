@@ -10,6 +10,29 @@ import { showErrorNotification } from '@/utils/notifications';
 
 type MessageRole = 'user' | 'assistant' | 'system';
 
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: null | (() => void);
+  onend: null | (() => void);
+  onerror: null | ((event: { error?: string; message?: string }) => void);
+  onresult: null | ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string; confidence?: number }> & { isFinal?: boolean }> }) => void);
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+const getSpeechRecognitionCtor = (): (new () => SpeechRecognitionLike) | null => {
+  if (typeof window === 'undefined') return null;
+  const anyWindow = window as unknown as {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return anyWindow.SpeechRecognition || anyWindow.webkitSpeechRecognition || null;
+};
+
 interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -59,48 +82,11 @@ interface AiVehicleSearchResponse {
   vehicles?: VehicleRecord[];
 }
 
-const QUICK_HINTS = [
-  'Ngân sách 600 triệu',
-  'Mình ưu tiên SUV',
-  'Mình đi gia đình 5 người',
-  'Mình cần xe đi làm hàng ngày',
-  'Tăng ngân sách lên 1 tỷ',
-  'Có xe nào của Toyota không?',
-  'Mình muốn xe tiết kiệm nhiên liệu',
-  'Đổi sang sedan giúp mình',
-];
-
 const CAR_PLACEHOLDER =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='100%25' height='100%25' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='30' font-family='Arial'>No car image</text></svg>";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const randomThinkingDelay = () => Math.floor(Math.random() * 2000) + 2000; // 2-4s
-
-const followUpForIntent = (intent?: AiChatIntent) => {
-  if (!intent) return [];
-
-  const actions: string[] = [];
-
-  if (intent.budget && intent.budget < 700_000_000) {
-    actions.push('Nếu thêm 100-200 triệu thì có lựa chọn nào tốt hơn?');
-  } else if (intent.budget && intent.budget >= 1_000_000_000) {
-    actions.push('Mình muốn thêm lựa chọn SUV trong tầm giá này');
-  }
-
-  if (intent.carType?.toLowerCase() === 'suv') {
-    actions.push('So sánh nhanh SUV và sedan cùng tầm giá');
-  } else if (intent.carType?.toLowerCase() === 'sedan') {
-    actions.push('Có mẫu sedan nào tiết kiệm xăng hơn không?');
-  }
-
-  if (intent.purpose === 'family') {
-    actions.push('Ưu tiên an toàn và cốp rộng giúp mình');
-  } else if (intent.purpose === 'business') {
-    actions.push('Xe chạy dịch vụ nào tối ưu chi phí nhất?');
-  }
-
-  return actions.slice(0, 3);
-};
 
 export default function AiConsultantPage() {
   const [input, setInput] = useState('');
@@ -109,6 +95,9 @@ export default function AiConsultantPage() {
   const [postings, setPostings] = useState<PostingRecord[]>([]);
   const [recommendedPostings, setRecommendedPostings] = useState<PostingRecord[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
@@ -124,13 +113,14 @@ export default function AiConsultantPage() {
     },
   ]);
   const [latestIntent, setLatestIntent] = useState<AiChatIntent | undefined>(undefined);
-  const [dynamicHints, setDynamicHints] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  const allHints = useMemo(
-    () => Array.from(new Set([...dynamicHints, ...QUICK_HINTS])).slice(0, 10),
-    [dynamicHints]
-  );
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const lastVoiceSentRef = useRef<string>('');
+  const loadingRef = useRef(false);
+  const sendToAssistantRef = useRef<(message: string) => void>(() => undefined);
+  const voiceBufferRef = useRef<string>('');
+  const voiceSendTimerRef = useRef<number | null>(null);
 
   const appendMessage = (role: MessageRole, content: string) => {
     setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, role, content }]);
@@ -155,6 +145,138 @@ export default function AiConsultantPage() {
 
     void loadPostings();
   }, []);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    const RecognitionCtor = getSpeechRecognitionCtor();
+    setVoiceSupported(Boolean(RecognitionCtor));
+    if (!RecognitionCtor) return;
+
+    const recognition = new RecognitionCtor();
+    recognition.lang = 'vi-VN';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceError(null);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    recognition.onerror = (event) => {
+      const error = String(event?.error || '').toLowerCase();
+      if (error === 'not-allowed' || error === 'service-not-allowed') {
+        setVoiceError('Bạn đã chặn quyền microphone. Hãy bật lại quyền mic trên trình duyệt.');
+      } else if (error === 'no-speech') {
+        setVoiceError('Mình chưa nghe rõ. Bạn thử nói lại nhé.');
+      } else if (error === 'audio-capture') {
+        setVoiceError('Không tìm thấy microphone. Bạn kiểm tra lại thiết bị ghi âm nhé.');
+      } else {
+        setVoiceError('Không thể nhận giọng nói ngay lúc này. Bạn thử lại sau.');
+      }
+    };
+    recognition.onresult = (event) => {
+      let interim = '';
+      let finalText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        const transcript = String(result?.[0]?.transcript || '').trim();
+        if (!transcript) continue;
+        if (result.isFinal) finalText += `${transcript} `;
+        else interim += `${transcript} `;
+      }
+
+      const finalChunk = finalText.trim();
+      const interimChunk = interim.trim();
+
+      if (finalChunk) {
+        voiceBufferRef.current = `${voiceBufferRef.current} ${finalChunk}`.trim();
+      }
+
+      const composed = `${voiceBufferRef.current}${interimChunk ? ` ${interimChunk}` : ''}`.trim();
+      if (composed) {
+        setInput(composed);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }
+
+      if (voiceSendTimerRef.current) {
+        window.clearTimeout(voiceSendTimerRef.current);
+      }
+
+      voiceSendTimerRef.current = window.setTimeout(() => {
+        voiceSendTimerRef.current = null;
+        const message = voiceBufferRef.current.trim() || composed.trim();
+        if (!message) return;
+        if (loadingRef.current) return;
+        if (message === lastVoiceSentRef.current) return;
+
+        lastVoiceSentRef.current = message;
+        voiceBufferRef.current = '';
+        try {
+          recognitionRef.current?.stop();
+        } catch {
+          // ignore
+        }
+        sendToAssistantRef.current(message);
+      }, 2000);
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      try {
+        if (voiceSendTimerRef.current) {
+          window.clearTimeout(voiceSendTimerRef.current);
+          voiceSendTimerRef.current = null;
+        }
+        voiceBufferRef.current = '';
+        recognition.onstart = null;
+        recognition.onend = null;
+        recognition.onerror = null;
+        recognition.onresult = null;
+        recognition.abort();
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (loading) return;
+    if (!voiceSupported || !recognitionRef.current) {
+      setVoiceError('Trình duyệt của bạn chưa hỗ trợ nhập giọng nói. Hãy dùng Chrome/Edge.');
+      return;
+    }
+
+    setVoiceError(null);
+    try {
+      if (isListening) {
+        if (voiceSendTimerRef.current) {
+          window.clearTimeout(voiceSendTimerRef.current);
+          voiceSendTimerRef.current = null;
+        }
+        voiceBufferRef.current = '';
+        recognitionRef.current.stop();
+      } else {
+        if (voiceSendTimerRef.current) {
+          window.clearTimeout(voiceSendTimerRef.current);
+          voiceSendTimerRef.current = null;
+        }
+        voiceBufferRef.current = '';
+        recognitionRef.current.start();
+      }
+    } catch {
+      setVoiceError('Không thể bật microphone. Bạn thử tải lại trang và cho phép mic nhé.');
+      setIsListening(false);
+    }
+  };
 
   const normalizeVehicle = (posting: PostingRecord): VehicleRecord => {
     return posting.vehicle || posting.vehicleId || {};
@@ -209,6 +331,16 @@ export default function AiConsultantPage() {
       return;
     }
 
+    const messageLower = message.toLowerCase();
+    const knownMakes = Array.from(
+      new Set(
+        postings
+          .map((p) => String(normalizeVehicle(p).make || '').trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
+    const mentionedMakes = knownMakes.filter((make) => make.length >= 3 && messageLower.includes(make));
+
     setSearchingDb(true);
     setDbError(null);
     try {
@@ -228,16 +360,38 @@ export default function AiConsultantPage() {
           if (postingVehicleId && aiVehicleId && postingVehicleId === aiVehicleId) return true;
 
           const makeMatched =
-            String(postingVehicle.make || '').toLowerCase() === String(aiVehicle.make || '').toLowerCase();
+            String(postingVehicle.make || '')
+              .toLowerCase()
+              .includes(String(aiVehicle.make || '').toLowerCase().trim()) ||
+            String(aiVehicle.make || '')
+              .toLowerCase()
+              .includes(String(postingVehicle.make || '').toLowerCase().trim());
           const modelMatched =
-            String(postingVehicle.model || '').toLowerCase() === String(aiVehicle.model || '').toLowerCase();
+            String(postingVehicle.model || '')
+              .toLowerCase()
+              .includes(String(aiVehicle.model || '').toLowerCase().trim()) ||
+            String(aiVehicle.model || '')
+              .toLowerCase()
+              .includes(String(postingVehicle.model || '').toLowerCase().trim());
           const yearMatched =
             Number(postingVehicle.yearOfManufacture || 0) === Number(aiVehicle.yearOfManufacture || 0);
           return makeMatched && modelMatched && yearMatched;
         });
       });
 
-      const scored = (matched.length ? matched : postings)
+      const makeFiltered =
+        !matched.length && mentionedMakes.length
+          ? postings.filter((posting) => {
+              const vehicle = normalizeVehicle(posting);
+              const make = String(vehicle.make || '').toLowerCase();
+              const title = String(posting.title || '').toLowerCase();
+              return mentionedMakes.some((mentioned) => make.includes(mentioned) || title.includes(mentioned));
+            })
+          : [];
+
+      const basePool = matched.length ? matched : makeFiltered.length ? makeFiltered : postings;
+
+      const scored = basePool
         .map((posting) => ({ posting, score: scorePosting(posting, intent) }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 8)
@@ -272,7 +426,6 @@ export default function AiConsultantPage() {
 
       appendMessage('assistant', response.reply || 'Minh chua co cau tra loi phu hop, ban thu doi goi y nhe.');
       setLatestIntent(response.intent);
-      setDynamicHints(followUpForIntent(response.intent));
       if (Array.isArray(response.recommendedVehicles) && response.recommendedVehicles.length > 0) {
         setRecommendedPostings(response.recommendedVehicles.slice(0, 8));
       } else {
@@ -286,6 +439,10 @@ export default function AiConsultantPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  sendToAssistantRef.current = (message: string) => {
+    void sendToAssistant(message);
   };
 
   const intentSummary = useMemo(() => {
@@ -322,7 +479,7 @@ export default function AiConsultantPage() {
                 Tư vấn mua xe nhanh, rõ ràng, dựa trên xe đang có trên website
               </h1>
               <p className="mt-2 max-w-3xl text-sm md:text-base text-slate-300">
-                Hãy nói nhu cầu (ngân sách, kiểu xe, mục đích). AI sẽ hỏi đúng phần còn thiếu và đề xuất danh sách xe phù hợp từ database.
+                Hãy nói nhu cầu (ngân sách, kiểu xe, mục đích). AI sẽ hỏi đúng phần còn thiếu và đề xuất danh sách xe phù hợp.
               </p>
             </div>
             <div className="flex gap-2">
@@ -337,7 +494,6 @@ export default function AiConsultantPage() {
                 onClick={() => {
                   setMessages((prev) => prev.slice(0, 2));
                   setLatestIntent(undefined);
-                  setDynamicHints([]);
                   setInput('');
                   setDbError(null);
                   setRecommendedPostings([]);
@@ -359,7 +515,7 @@ export default function AiConsultantPage() {
                   <div>
                     <div className="text-sm font-semibold text-slate-100">Tư vấn viên</div>
                     <div className="text-xs text-slate-400">
-                      {loading ? 'Đang suy nghĩ…' : 'Sẵn sàng tư vấn theo database'}
+                      {loading ? 'Đang suy nghĩ…' : 'Sẵn sàng tư vấn theo dữ liệu xe đang có trên website'}
                     </div>
                   </div>
                 </div>
@@ -402,20 +558,6 @@ export default function AiConsultantPage() {
               </div>
 
               <div className="px-5 pb-5">
-                <div className="flex flex-wrap gap-2">
-                  {allHints.map((hint) => (
-                    <button
-                      key={hint}
-                      type="button"
-                      onClick={() => sendToAssistant(hint)}
-                      disabled={loading}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10 disabled:opacity-60"
-                    >
-                      {hint}
-                    </button>
-                  ))}
-                </div>
-
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -425,6 +567,7 @@ export default function AiConsultantPage() {
                 >
                   <div className="flex-1 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-400/60">
                     <input
+                      ref={inputRef}
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       disabled={loading}
@@ -437,14 +580,75 @@ export default function AiConsultantPage() {
                       <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">mục đích</span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">số chỗ</span>
                     </div>
+                    {voiceError && (
+                      <div className="mt-2 text-[11px] text-amber-200/90">
+                        {voiceError}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white hover:from-cyan-400 hover:to-indigo-400 disabled:opacity-60 shadow-lg shadow-cyan-500/20"
-                  >
-                    {loading ? 'Đang gửi…' : 'Gửi tư vấn'}
-                  </button>
+                  <div className="flex gap-2 md:flex-col md:justify-stretch">
+                    <button
+                      type="button"
+                      onClick={toggleVoiceInput}
+                      disabled={loading || !voiceSupported}
+                      aria-pressed={isListening}
+                      title={voiceSupported ? (isListening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói') : 'Trình duyệt không hỗ trợ'}
+                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition disabled:opacity-60 ${
+                        isListening
+                          ? 'border-rose-300/30 bg-rose-500/15 text-rose-100'
+                          : 'border-white/15 bg-white/5 text-slate-200 hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={isListening ? 'animate-pulse' : ''}
+                        >
+                          <path
+                            d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M19 11a7 7 0 0 1-14 0"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 18v3"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M8 21h8"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {isListening ? 'Đang nghe…' : 'Nói'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white hover:from-cyan-400 hover:to-indigo-400 disabled:opacity-60 shadow-lg shadow-cyan-500/20"
+                    >
+                      {loading ? 'Đang gửi…' : 'Gửi tư vấn'}
+                    </button>
+                  </div>
                 </form>
               </div>
             </div>

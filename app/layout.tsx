@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ConfigProvider } from 'antd';
 import "./globals.css";
 import ChatSupportBubble from '@/components/ChatSupportBubble';
+import VoiceNavigatorBubble from '@/components/VoiceNavigatorBubble';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
         <ConfigProvider>
           {children}
           <ChatSupportBubble />
+          <VoiceNavigatorBubble />
         </ConfigProvider>
       </body>
     </html>
