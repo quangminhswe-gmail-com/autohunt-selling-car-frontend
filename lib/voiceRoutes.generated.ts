@@ -106,15 +106,6 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     ]
   },
   {
-    "path": "/auth/google/callback",
-    "title": "Auth / Google / Callback",
-    "keywords": [
-      "auth",
-      "google",
-      "callback"
-    ]
-  },
-  {
     "path": "/login",
     "title": "Login",
     "keywords": [
@@ -184,14 +175,6 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     "title": "Vehicles",
     "keywords": [
       "vehicles"
-    ]
-  },
-  {
-    "path": "/vehicles/ai",
-    "title": "Vehicles / Ai",
-    "keywords": [
-      "vehicles",
-      "ai"
     ]
   },
   {

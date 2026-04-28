@@ -49,6 +49,25 @@ type VoiceAction =
   | { type: 'back' }
   | { type: 'reload' };
 
+type VehicleFilterPayload = {
+  reset?: boolean;
+  searchQuery?: string;
+  selectedMakes?: string[];
+  selectedTypes?: string[];
+  selectedYear?: string;
+  selectedTransmissions?: string[];
+  selectedFuelTypes?: string[];
+  minPrice?: string;
+  maxPrice?: string;
+  sortBy?: string;
+};
+
+type VehicleFilterEnvelope = {
+  filters: VehicleFilterPayload;
+  criteriaCount?: number;
+  criteriaKeys?: Array<keyof VehicleFilterPayload>;
+};
+
 export default function VoiceNavigatorBubble() {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,12 +75,146 @@ export default function VoiceNavigatorBubble() {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastHeard, setLastHeard] = useState<string>('');
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const sendTimerRef = useRef<number | null>(null);
   const bufferRef = useRef<string>('');
 
   const bubbleBaseClasses =
     'flex items-center gap-2 rounded-full bg-slate-900/70 backdrop-blur border border-white/10 px-3 py-2.5 text-white font-semibold shadow-lg transition-transform duration-200 hover:-translate-y-0.5 hover:bg-slate-900/85';
+
+  const cheatsheet = useMemo(() => {
+    const segmentToVi: Record<string, string> = {
+      home: 'Trang chủ',
+      admin: 'Quản trị',
+      dashboard: 'Bảng điều khiển',
+      cars: 'Xe',
+      vehicle: 'Xe',
+      vehicles: 'Danh sách xe',
+      posting: 'Bài đăng',
+      reviews: 'Đánh giá',
+      coupons: 'Mã giảm giá',
+      customers: 'Khách hàng',
+      finance: 'Tài chính',
+      transactions: 'Giao dịch',
+      notifications: 'Thông báo',
+      support: 'Hỗ trợ',
+      requests: 'Yêu cầu',
+      messages: 'Tin nhắn',
+      orders: 'Đơn hàng',
+      seller: 'Người bán',
+      sell: 'Đăng bán xe',
+      profile: 'Hồ sơ cá nhân',
+      login: 'Đăng nhập',
+      signup: 'Đăng ký',
+      auth: 'Xác thực',
+      google: 'Google',
+      callback: 'Callback',
+    };
+
+    const englishWordToVi: Array<[RegExp, string]> = [
+      [/\borders?\b/gi, 'đơn hàng'],
+      [/\bmessages?\b/gi, 'tin nhắn'],
+      [/\bvehicles?\b/gi, 'xe'],
+      [/\bvehicle\b/gi, 'xe'],
+      [/\bprofile\b/gi, 'hồ sơ'],
+      [/\blogin\b/gi, 'đăng nhập'],
+      [/\bsign\s*up\b/gi, 'đăng ký'],
+      [/\bsignup\b/gi, 'đăng ký'],
+      [/\bsell\b/gi, 'đăng bán'],
+      [/\bseller\b/gi, 'người bán'],
+      [/\bsupport\b/gi, 'hỗ trợ'],
+      [/\brequest(s)?\b/gi, 'yêu cầu'],
+      [/\badmin\b/gi, 'quản trị'],
+      [/\bdashboard\b/gi, 'bảng điều khiển'],
+      [/\btransaction(s)?\b/gi, 'giao dịch'],
+      [/\bnotification(s)?\b/gi, 'thông báo'],
+      [/\bcoupon(s)?\b/gi, 'mã giảm giá'],
+      [/\bcustomer(s)?\b/gi, 'khách hàng'],
+      [/\bfinance\b/gi, 'tài chính'],
+    ];
+
+    const translateEnglishTitleToVi = (title: string) => {
+      let out = String(title || '');
+      for (const [re, rep] of englishWordToVi) {
+        out = out.replace(re, rep);
+      }
+      return out;
+    };
+
+    const titleFromPathVi = (routePath: string, fallbackTitle?: string) => {
+      if (routePath === '/') return 'Trang chủ';
+      const segs = routePath.split('/').filter(Boolean);
+      const vnParts = segs.map((seg) => {
+        const cleaned = seg.replace(/[-_]/g, ' ').trim().toLowerCase();
+        return segmentToVi[cleaned] || cleaned.replace(/\b\w/g, (m) => m.toUpperCase());
+      });
+      const composed = vnParts.join(' / ').trim();
+      if (composed) return composed;
+      return fallbackTitle ? fallbackTitle.replaceAll('/', ' / ') : routePath;
+    };
+
+    const titleForSpeech = (title: string) =>
+      title
+        .replaceAll('/', ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const buildPhrasesLegacy = (title: string) => {
+      const t = titleForSpeech(title);
+      if (!t) return [];
+      return [
+        `mở ${t}`,
+        `vào ${t}`,
+        `đi đến ${t}`,
+        `đi tới ${t}`,
+        `cho tôi tới ${t}`,
+      ];
+    };
+
+    const buildPhrasesVietnamese = (title: string) => {
+      const t = titleForSpeech(title);
+      if (!t) return [];
+      return [
+        `mở trang ${t}`,
+        `vào trang ${t}`,
+        `đi đến trang ${t}`,
+        `chuyển đến trang ${t}`,
+        `đưa tôi đến trang ${t}`,
+      ];
+    };
+
+    const routes = VOICE_ROUTES
+      .filter((r) => r.path && r.title)
+      .map((r) => {
+        const viTitle = titleFromPathVi(r.path, r.title);
+        const legacyPhrases = buildPhrasesLegacy(r.title);
+        const translatedFromEnglish = translateEnglishTitleToVi(r.title);
+        const viFromEnglishPhrases =
+          translatedFromEnglish && translatedFromEnglish !== r.title
+            ? buildPhrasesVietnamese(translatedFromEnglish)
+            : [];
+        const viPhrases = buildPhrasesVietnamese(viTitle);
+        const phrases = Array.from(new Set([...legacyPhrases, ...viFromEnglishPhrases, ...viPhrases]));
+        return {
+          path: r.path,
+          title: viTitle,
+          rawTitle: r.title,
+          phrases,
+          legacyCount: legacyPhrases.length,
+        };
+      });
+
+    // Prefer user-facing routes first (non-admin), then admin routes
+    routes.sort((a, b) => {
+      const aAdmin = a.path.startsWith('/admin') ? 1 : 0;
+      const bAdmin = b.path.startsWith('/admin') ? 1 : 0;
+      if (aAdmin !== bAdmin) return aAdmin - bAdmin;
+      return a.path.localeCompare(b.path);
+    });
+
+    return routes;
+  }, []);
 
   const intentIndex = useMemo(() => {
     const verbs = new Set([
@@ -117,8 +270,8 @@ export default function VoiceNavigatorBubble() {
       {
         label: 'Vehicles',
         action: { type: 'push', href: '/vehicles' },
-        phrases: ['danh sach xe', 'xem xe', 'trang xe'],
-        keywords: ['xe', 'vehicles', 'car', 'cars'],
+        phrases: ['danh sach xe', 'xem xe', 'trang xe', 'tim xe', 'phuong tien', 'phuong tien di chuyen'],
+        keywords: ['xe', 'vehicles', 'car', 'cars', 'phuong tien', 'phuong tien di chuyen'],
         minScore: 2,
       },
       {
@@ -161,9 +314,56 @@ export default function VoiceNavigatorBubble() {
     return { intents, tokenize, verbs, hasAnyPhrase, scoreByKeywords };
   }, []);
 
-  const runCommand = (raw: string) => {
+  const applyVehicleFilter = async (utterance: string) => {
+    const response = await fetch('/api/voice-vehicle-filter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ utterance }),
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as {
+      ok?: boolean;
+      filters?: VehicleFilterPayload;
+      criteriaCount?: number;
+      criteriaKeys?: Array<keyof VehicleFilterPayload>;
+    };
+    const envelope: VehicleFilterEnvelope = {
+      filters: data?.filters || {},
+      criteriaCount: data?.criteriaCount,
+      criteriaKeys: data?.criteriaKeys,
+    };
+
+    if (pathname !== '/vehicles') {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('voiceVehicleFilter', JSON.stringify(envelope));
+      }
+      router.push('/vehicles');
+      return true;
+    }
+
+    window.dispatchEvent(new CustomEvent('voice:vehicle-filter', { detail: envelope }));
+    return true;
+  };
+
+  const runCommand = async (raw: string) => {
     const cmd = normalizeCommand(raw);
     if (!cmd) return false;
+
+    // Voice-driven filtering on Browse Cars
+    if (
+      cmd.includes('tim xe') ||
+      cmd.includes('tìm xe') ||
+      (cmd.includes('tim') && cmd.includes('xe')) ||
+      cmd.includes('loc xe') ||
+      cmd.includes('lọc xe') ||
+      cmd.includes('search xe')
+    ) {
+      try {
+        return await applyVehicleFilter(raw);
+      } catch {
+        return false;
+      }
+    }
 
     const tokens = intentIndex.tokenize(cmd).filter((t) => !intentIndex.verbs.has(t));
     const expandedTokens = Array.from(
@@ -270,11 +470,13 @@ export default function VoiceNavigatorBubble() {
       setListening(true);
       setError(null);
       bufferRef.current = '';
+      setShowCheatsheet(true);
     };
 
     recognition.onend = () => {
       setListening(false);
       bufferRef.current = '';
+      setShowCheatsheet(false);
       if (sendTimerRef.current) {
         window.clearTimeout(sendTimerRef.current);
         sendTimerRef.current = null;
@@ -323,15 +525,16 @@ export default function VoiceNavigatorBubble() {
         const message = bufferRef.current.trim() || composed;
         if (!message) return;
 
-        const ok = runCommand(message);
         bufferRef.current = '';
-        if (!ok) setError('Không nhận ra lệnh. Thử: "về trang chủ", "mở profile", "quay lại".');
-
-        try {
-          recognition.stop();
-        } catch {
-          // ignore
-        }
+        void (async () => {
+          const ok = await runCommand(message);
+          if (!ok) setError('Không nhận ra lệnh. Thử: "về trang chủ", "mở profile", "quay lại", "tìm xe Toyota".');
+          try {
+            recognition.stop();
+          } catch {
+            // ignore
+          }
+        })();
       }, 2000);
     };
 
@@ -362,11 +565,17 @@ export default function VoiceNavigatorBubble() {
     }
     setError(null);
     try {
-      if (listening) recognitionRef.current.stop();
-      else recognitionRef.current.start();
+      if (listening) {
+        setShowCheatsheet(false);
+        recognitionRef.current.stop();
+      } else {
+        setShowCheatsheet(true);
+        recognitionRef.current.start();
+      }
     } catch {
       setError('Không thể bật microphone. Hãy tải lại trang và cho phép mic.');
       setListening(false);
+      setShowCheatsheet(false);
     }
   };
 
@@ -382,6 +591,59 @@ export default function VoiceNavigatorBubble() {
           Đang nghe: <span className="text-slate-100 font-semibold">{lastHeard}</span>
         </div>
       )}
+
+      {showCheatsheet && (
+        <div className="w-[360px] max-w-[86vw] overflow-hidden rounded-3xl border border-white/10 bg-slate-950/90 backdrop-blur shadow-xl shadow-black/30">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+            <div className="text-sm font-semibold text-slate-100">Cách nói để đi đến mọi trang</div>
+            <button
+              type="button"
+              onClick={() => setShowCheatsheet(false)}
+              className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-200 hover:bg-white/10"
+            >
+              Đóng
+            </button>
+          </div>
+          <div className="max-h-[420px] overflow-y-auto px-4 py-3">
+            <div className="text-xs text-slate-300">
+              Bạn có thể nói tự nhiên. Ví dụ:{' '}
+              <span className="text-slate-100 font-semibold">“mở …”</span>,{' '}
+              <span className="text-slate-100 font-semibold">“đi đến …”</span> hoặc{' '}
+              <span className="text-slate-100 font-semibold">“mở trang …”</span> (thuần tiếng Việt).
+              <div className="mt-2 text-[11px] text-slate-400">
+                Mẹo nhanh: bạn cũng có thể nói <span className="text-slate-200 font-semibold">“quay lại”</span> hoặc{' '}
+                <span className="text-slate-200 font-semibold">“tải lại trang”</span>.
+              </div>
+            </div>
+            <div className="mt-3 space-y-3">
+              {cheatsheet.map((r) => (
+                <div key={r.path} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-100">{r.title}</div>
+                      {r.rawTitle && r.rawTitle !== r.title && (
+                        <div className="mt-0.5 text-[11px] text-slate-400">{r.rawTitle}</div>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400">{r.path}</div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {r.phrases.slice(0, 5).map((p) => (
+                      <span
+                        key={p}
+                        className="rounded-full border border-white/10 bg-slate-950/40 px-2 py-0.5 text-[11px] text-slate-200"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={toggle}

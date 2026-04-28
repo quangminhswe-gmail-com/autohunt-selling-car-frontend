@@ -5,6 +5,8 @@ const path = require('path');
 const APP_DIR = path.join(__dirname, '..', 'app');
 const OUT_FILE = path.join(__dirname, '..', 'lib', 'voiceRoutes.generated.ts');
 
+const EXCLUDED_ROUTES = new Set(['/vehicles/ai', '/auth/google/callback']);
+
 const isGroupSegment = (seg) => seg.startsWith('(') && seg.endsWith(')');
 const isDynamicSegment = (seg) => seg.startsWith('[') && seg.endsWith(']');
 
@@ -59,7 +61,9 @@ const main = () => {
 
   const routePaths = Array.from(new Set(collectPages(APP_DIR))).sort();
 
-  const records = routePaths.map((routePath) => {
+  const records = routePaths
+    .filter((routePath) => !EXCLUDED_ROUTES.has(routePath))
+    .map((routePath) => {
     const title = toTitle(routePath);
     const segs = routePath.split('/').filter(Boolean);
     const keywords = Array.from(

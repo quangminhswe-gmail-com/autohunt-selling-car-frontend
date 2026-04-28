@@ -39,6 +39,25 @@ interface Posting {
   viewCount?: number;
 }
 
+type VoiceVehicleFilterPayload = {
+  reset?: boolean;
+  searchQuery?: string;
+  selectedMakes?: string[];
+  selectedTypes?: string[];
+  selectedYear?: string;
+  selectedTransmissions?: string[];
+  selectedFuelTypes?: string[];
+  minPrice?: string;
+  maxPrice?: string;
+  sortBy?: string;
+};
+
+type VoiceVehicleFilterEnvelope = {
+  filters: VoiceVehicleFilterPayload;
+  criteriaCount?: number;
+  criteriaKeys?: Array<keyof VoiceVehicleFilterPayload>;
+};
+
 export default function VehiclesPage() {
   const [postings, setPostings] = useState<Posting[]>([]);
   const [filteredPostings, setFilteredPostings] = useState<Posting[]>([]);
@@ -154,6 +173,73 @@ export default function VehiclesPage() {
     setMaxPrice(params.get('maxPrice') || '');
     setSelectedMakes(params.get('make') ? params.get('make')!.split(',').filter(Boolean) : []);
     setSortBy(params.get('sortBy') || 'newest');
+  }, []);
+
+  const applyVoiceFilters = (incoming: VoiceVehicleFilterPayload | VoiceVehicleFilterEnvelope) => {
+    const envelope =
+      (incoming as VoiceVehicleFilterEnvelope)?.filters != null
+        ? (incoming as VoiceVehicleFilterEnvelope)
+        : ({ filters: incoming as VoiceVehicleFilterPayload } as VoiceVehicleFilterEnvelope);
+
+    const filters = envelope.filters || {};
+
+    if (filters.reset) {
+      clearFilters();
+      return;
+    }
+
+    // If user only spoke ONE criterion this turn, reset everything first (as requested).
+    if (envelope.criteriaCount === 1) {
+      clearFilters();
+    }
+
+    if (typeof filters.searchQuery === 'string') setSearchQuery(filters.searchQuery);
+    if (typeof filters.minPrice === 'string') setMinPrice(filters.minPrice);
+    if (typeof filters.maxPrice === 'string') setMaxPrice(filters.maxPrice);
+    if (Array.isArray(filters.selectedMakes)) setSelectedMakes(filters.selectedMakes);
+    if (typeof filters.selectedYear === 'string') setSelectedYear(filters.selectedYear);
+    if (Array.isArray(filters.selectedTypes)) setSelectedTypes(filters.selectedTypes);
+    if (Array.isArray(filters.selectedTransmissions)) setSelectedTransmissions(filters.selectedTransmissions);
+    if (Array.isArray(filters.selectedFuelTypes)) setSelectedFuelTypes(filters.selectedFuelTypes);
+    if (typeof filters.sortBy === 'string') setSortBy(filters.sortBy);
+
+    // reflect a few filters into URL (so refresh keeps them)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (filters.searchQuery != null) params.set('search', filters.searchQuery);
+      if (filters.minPrice != null) params.set('minPrice', filters.minPrice);
+      if (filters.maxPrice != null) params.set('maxPrice', filters.maxPrice);
+      if (filters.selectedMakes != null) params.set('make', filters.selectedMakes.join(','));
+      if (filters.sortBy != null) params.set('sortBy', filters.sortBy);
+      const next = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState(null, '', next);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Apply deferred filter from Voice when user was not on /vehicles
+    const pending = window.sessionStorage.getItem('voiceVehicleFilter');
+    if (pending) {
+      try {
+        const parsed = JSON.parse(pending) as VoiceVehicleFilterEnvelope | VoiceVehicleFilterPayload;
+        applyVoiceFilters(parsed);
+      } catch {
+        // ignore
+      }
+      window.sessionStorage.removeItem('voiceVehicleFilter');
+    }
+
+    const onVoice = (event: Event) => {
+      const detail = (event as CustomEvent<VoiceVehicleFilterEnvelope | VoiceVehicleFilterPayload>).detail;
+      if (!detail) return;
+      applyVoiceFilters(detail);
+    };
+
+    window.addEventListener('voice:vehicle-filter', onVoice as EventListener);
+    return () => window.removeEventListener('voice:vehicle-filter', onVoice as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
