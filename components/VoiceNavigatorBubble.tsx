@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { VOICE_ROUTES } from '@/lib/voiceRoutes.generated';
+import { apiClient } from '@/app/utils/api';
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -315,34 +316,36 @@ export default function VoiceNavigatorBubble() {
   }, []);
 
   const applyVehicleFilter = async (utterance: string) => {
-    const response = await fetch('/api/voice-vehicle-filter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ utterance }),
-    });
-    if (!response.ok) return false;
-    const data = (await response.json()) as {
-      ok?: boolean;
-      filters?: VehicleFilterPayload;
-      criteriaCount?: number;
-      criteriaKeys?: Array<keyof VehicleFilterPayload>;
-    };
-    const envelope: VehicleFilterEnvelope = {
-      filters: data?.filters || {},
-      criteriaCount: data?.criteriaCount,
-      criteriaKeys: data?.criteriaKeys,
-    };
+    try {
+      const data = await apiClient<{
+        ok?: boolean;
+        filters?: VehicleFilterPayload;
+        criteriaCount?: number;
+        criteriaKeys?: Array<keyof VehicleFilterPayload>;
+      }>('/voice-vehicle-filter', {
+        method: 'POST',
+        body: { utterance },
+      });
+      const envelope: VehicleFilterEnvelope = {
+        filters: data?.filters || {},
+        criteriaCount: data?.criteriaCount,
+        criteriaKeys: data?.criteriaKeys,
+      };
 
-    if (pathname !== '/vehicles') {
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem('voiceVehicleFilter', JSON.stringify(envelope));
+      if (pathname !== '/vehicles') {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('voiceVehicleFilter', JSON.stringify(envelope));
+        }
+        router.push('/vehicles');
+        return true;
       }
-      router.push('/vehicles');
-      return true;
-    }
 
-    window.dispatchEvent(new CustomEvent('voice:vehicle-filter', { detail: envelope }));
-    return true;
+      window.dispatchEvent(new CustomEvent('voice:vehicle-filter', { detail: envelope }));
+      return true;
+    } catch (error) {
+      console.error('Voice filter error:', error);
+      return false;
+    }
   };
 
   const runCommand = async (raw: string) => {
