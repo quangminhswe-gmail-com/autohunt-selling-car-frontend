@@ -28,6 +28,7 @@ export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [seenNotificationIds, setSeenNotificationIds] = useState<Set<string>>(new Set());
+  const [notificationApiOffline, setNotificationApiOffline] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -40,9 +41,15 @@ export default function Header() {
         method: "GET",
       });
       setNotifications(Array.isArray(data) ? data : []);
+      setNotificationApiOffline(false);
     } catch (err) {
-      console.error("Error fetching notifications:", err);
+      // If backend/API is offline (common in local dev), avoid noisy console spam.
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.toLowerCase().includes("cannot connect to api")) {
+        console.error("Error fetching notifications:", err);
+      }
       setNotifications([]);
+      setNotificationApiOffline(true);
     } finally {
       setLoadingNotifications(false);
     }
@@ -103,18 +110,26 @@ export default function Header() {
   // Fetch notifications on login and when panel opens
   useEffect(() => {
     if (isLoggedIn) {
-      fetchNotifications();
+      // Only auto-fetch when API is reachable or when panel is opened.
+      if (notificationOpen || !notificationApiOffline) {
+        fetchNotifications();
+      }
     }
-  }, [isLoggedIn, notificationOpen, fetchNotifications]);
+  }, [isLoggedIn, notificationOpen, notificationApiOffline, fetchNotifications]);
 
   // Poll notifications in background for near real-time badge updates
   useEffect(() => {
     if (!isLoggedIn) return;
+    // If API appears offline, slow down polling significantly.
+    const intervalMs = notificationApiOffline ? 60000 : 15000;
     const timer = window.setInterval(() => {
-      fetchNotifications();
-    }, 15000);
+      // Prefer polling only when panel is opened if API is offline.
+      if (!notificationApiOffline || notificationOpen) {
+        fetchNotifications();
+      }
+    }, intervalMs);
     return () => window.clearInterval(timer);
-  }, [isLoggedIn, fetchNotifications]);
+  }, [isLoggedIn, notificationApiOffline, notificationOpen, fetchNotifications]);
 
   // Only mark notifications as seen when panel is actually opened
   useEffect(() => {

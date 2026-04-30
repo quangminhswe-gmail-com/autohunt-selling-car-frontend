@@ -86,6 +86,13 @@ export const apiClient = async <T = any>(endpoint: string, options: ApiOptions =
     }
 
     const failedEndpoint = normalizeEndpoint(endpoint);
+
+    // Notifications are a non-critical enhancement (header badge).
+    // When backend is offline during local dev, avoid throwing noisy errors.
+    if (failedEndpoint === '/notifications') {
+        return [] as unknown as T;
+    }
+
     throw new Error(
         `Cannot connect to API (${failedEndpoint}). Please check backend server and NEXT_PUBLIC_API_URL. ${lastError instanceof Error ? `Details: ${lastError.message}` : ''}`.trim()
     );

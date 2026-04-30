@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "gen:voice-routes": "node scripts/generate-voice-routes.js",
+    "dev": "node scripts/generate-voice-routes.js && next dev --webpack",
+    "build": "node scripts/generate-voice-routes.js && next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
+    "@google/generative-ai": "^0.24.1",
     "@types/react-select": "^5.0.0",
     "antd": "^6.1.4",
     "cloudinary": "^2.9.0",
