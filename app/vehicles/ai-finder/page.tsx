@@ -130,7 +130,13 @@ export default function AiFinderPage() {
       setLoadingData(true);
       try {
         const data = await apiClient<Posting[]>('/postings');
-        setAllPostings(data.filter((posting) => posting.status?.toLowerCase() === 'active'));
+        // Filter only ACTIVE postings - exclude RESERVED (pending order) and SOLD postings
+        setAllPostings(
+          data.filter((posting) => {
+            const status = posting.status?.toLowerCase();
+            return status === 'active'; // Only show active listings that haven't been purchased or reserved
+          })
+        );
       } catch (err) {
         setError((err as Error).message || 'Failed to load vehicles.');
       } finally {
@@ -185,7 +191,14 @@ export default function AiFinderPage() {
             seller: await readSellerFromPostingDetails(posting._id),
           })),
         );
-        setResults(enriched);
+        
+        // Filter out RESERVED and SOLD postings - only show ACTIVE matches
+        const activeMatches = enriched.filter((result) => {
+          const status = result.posting.status?.toLowerCase();
+          return status === 'active';
+        });
+        
+        setResults(activeMatches);
       } catch {
         // Keep existing result list if enrichment fails.
       }
@@ -364,9 +377,9 @@ export default function AiFinderPage() {
         setShowEmailPromptModal(true);
       }
     } catch (err) {
-      const message = (err as Error).message || 'AI flow failed.';
+      const message = (err as Error).message || 'Failed.';
       setError(message);
-      showErrorNotification('AI error', message);
+      showErrorNotification('Error', message);
     } finally {
       setSearching(false);
     }
@@ -460,7 +473,7 @@ export default function AiFinderPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-10">
-        <h1 className="text-4xl font-bold">AI Finder Alerts</h1>
+        <h1 className="text-4xl font-bold"> Smart Car Finder</h1>
         <p className="text-slate-300 mt-3 max-w-3xl">
           Fill your preferred buyer criteria. The system saves them to your Buyer Profile, searches matching cars, and
           if unavailable now, sends a header notification as soon as a suitable listing appears.
@@ -629,7 +642,7 @@ export default function AiFinderPage() {
           <h2 className="text-2xl font-semibold mb-4">Current matches</h2>
           {results.length === 0 ? (
             <div className="rounded-xl border border-white/20 bg-white/5 p-5 text-slate-300">
-              Matching cars will appear here when AI finds results.
+              Matching cars will appear here when System finds results.
               {showWaiting && (
                 <div className="mt-2 text-slate-200">
                   Sorry for the inconvenience. You can check other available listings at{' '}

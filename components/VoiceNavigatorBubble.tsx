@@ -111,6 +111,10 @@ export default function VoiceNavigatorBubble() {
       auth: 'Xác thực',
       google: 'Google',
       callback: 'Callback',
+      careers: 'Tuyển dụng',
+      terms: 'Điều khoản',
+      privacy: 'Quyền riêng tư',
+      cookies: 'Cookie',
     };
 
     const englishWordToVi: Array<[RegExp, string]> = [
@@ -133,6 +137,10 @@ export default function VoiceNavigatorBubble() {
       [/\bcoupon(s)?\b/gi, 'mã giảm giá'],
       [/\bcustomer(s)?\b/gi, 'khách hàng'],
       [/\bfinance\b/gi, 'tài chính'],
+      [/\bcareer(s)?\b/gi, 'tuyển dụng'],
+      [/\bterms?\b/gi, 'điều khoản'],
+      [/\bprivacy\b/gi, 'quyền riêng tư'],
+      [/\bcookie(s)?\b/gi, 'cookie'],
     ];
 
     const translateEnglishTitleToVi = (title: string) => {

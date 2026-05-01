@@ -131,7 +131,17 @@ export default function AiConsultantPage() {
     }, 20);
   };
 
+  const resetConversation = async () => {
+    try {
+      await apiClient('/ai-chat/reset', { method: 'POST' });
+    } catch {
+      // ignore reset failures, session may not exist yet
+    }
+  };
+
   useEffect(() => {
+    void resetConversation();
+
     const loadPostings = async () => {
       try {
         const data = await apiClient<PostingRecord[]>('/postings');
@@ -491,7 +501,8 @@ export default function AiConsultantPage() {
               </Link>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
+                  await resetConversation();
                   setMessages((prev) => prev.slice(0, 2));
                   setLatestIntent(undefined);
                   setInput('');

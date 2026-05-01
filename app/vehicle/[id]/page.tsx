@@ -43,6 +43,7 @@ interface Posting {
     firstName: string;
     lastName: string;
     email: string;
+    phoneNumber?: string;
     avatarUrl?: string;
     rating: number;
     totalPostings: number;
@@ -165,6 +166,7 @@ export default function VehicleDetailsPage() {
   const [selectedCars] = useState(RELATED_CARS);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showSellerProfile, setShowSellerProfile] = useState(false);
 
   const router = useRouter();
 
@@ -563,14 +565,97 @@ export default function VehicleDetailsPage() {
               </div>
 
               <div className="flex gap-2">
-                <button className="flex-1 bg-[#006557] text-white py-2.5 px-4 rounded-lg font-medium hover:bg-[#005548] transition-colors text-sm">
+                <button
+                  onClick={() => handleContactSeller(posting.id)}
+                  className="flex-1 bg-[#006557] text-white py-2.5 px-4 rounded-lg font-medium hover:bg-[#005548] transition-colors text-sm"
+                >
                   Contact Seller
                 </button>
-                <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium">
+                <button
+                  onClick={() => setShowSellerProfile(true)}
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
                   View Profile
                 </button>
               </div>
             </div>
+
+            {showSellerProfile && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="w-full max-w-lg rounded-3xl overflow-hidden bg-white shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">Seller Profile</h2>
+                      <p className="text-sm text-gray-500">Details for {posting.ownerId?.firstName} {posting.ownerId?.lastName}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowSellerProfile(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                      aria-label="Close seller profile"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden border border-gray-200 flex items-center justify-center">
+                        {posting.ownerId?.avatarUrl ? (
+                          <img
+                            src={posting.ownerId.avatarUrl}
+                            alt={`${posting.ownerId.firstName} ${posting.ownerId.lastName}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-lg font-semibold text-gray-700">
+                            {posting.ownerId?.firstName?.[0]}{posting.ownerId?.lastName?.[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {posting.ownerId?.firstName} {posting.ownerId?.lastName}
+                        </p>
+                        <p className="text-sm text-gray-500">Verified Seller</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="rounded-2xl bg-gray-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-gray-500">Email</p>
+                        <p className="mt-2 text-sm text-gray-900">{posting.ownerId?.email || 'Not available'}</p>
+                      </div>
+                      <div className="rounded-2xl bg-gray-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-gray-500">Phone</p>
+                        <p className="mt-2 text-sm text-gray-900">{posting.ownerId?.phoneNumber || 'Not available'}</p>
+                      </div>
+                      <div className="rounded-2xl bg-gray-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-gray-500">Rating</p>
+                        <p className="mt-2 text-sm text-gray-900">{posting.ownerId?.rating?.toFixed(1) ?? '0.0'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        onClick={() => setShowSellerProfile(false)}
+                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowSellerProfile(false);
+                          handleContactSeller(posting.id);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-[#006557] text-sm font-medium text-white hover:bg-[#005548] transition"
+                      >
+                        Contact Seller
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* REVIEWS SECTION */}
             {reviews.length > 0 && (

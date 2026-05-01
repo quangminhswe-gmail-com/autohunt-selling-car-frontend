@@ -474,7 +474,7 @@ export default function VehiclesPage() {
                 href="/vehicles/ai-finder"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium hover:from-emerald-400 hover:to-teal-400 transition-colors shadow-sm"
               >
-                <span>AI Finder Alerts</span>
+                <span>Smart Car Finder</span>
               </Link>
             </div>
           </div>
