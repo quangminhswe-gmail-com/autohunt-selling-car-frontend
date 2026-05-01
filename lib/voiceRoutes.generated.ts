@@ -16,6 +16,13 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     ]
   },
   {
+    "path": "/about",
+    "title": "About",
+    "keywords": [
+      "about"
+    ]
+  },
+  {
     "path": "/admin/cars",
     "title": "Admin / Cars",
     "keywords": [
@@ -106,6 +113,27 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     ]
   },
   {
+    "path": "/careers",
+    "title": "Careers",
+    "keywords": [
+      "careers"
+    ]
+  },
+  {
+    "path": "/contact",
+    "title": "Contact",
+    "keywords": [
+      "contact"
+    ]
+  },
+  {
+    "path": "/cookies",
+    "title": "Cookies",
+    "keywords": [
+      "cookies"
+    ]
+  },
+  {
     "path": "/login",
     "title": "Login",
     "keywords": [
@@ -132,6 +160,13 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     "keywords": [
       "orders",
       "seller"
+    ]
+  },
+  {
+    "path": "/privacy",
+    "title": "Privacy",
+    "keywords": [
+      "privacy"
     ]
   },
   {
@@ -168,6 +203,13 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     "keywords": [
       "support",
       "requests"
+    ]
+  },
+  {
+    "path": "/terms",
+    "title": "Terms",
+    "keywords": [
+      "terms"
     ]
   },
   {
