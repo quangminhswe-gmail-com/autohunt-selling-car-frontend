@@ -44,11 +44,6 @@ export default function PaymentManagementPage() {
                     />
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
-                <div className="flex">
-                    <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm transition-all shadow-emerald-200">
-                        <Plus size={18} /> Manual Payment
-                    </button>
-                </div>
             </div>
 
             {/* Table */}

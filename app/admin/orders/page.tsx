@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Plus, Search, Filter, 
-  ChevronLeft, ChevronRight, ShoppingCart, 
+  ShoppingCart, 
   Clock, CheckCircle, XCircle, Eye, Trash2
 } from 'lucide-react';
 import { apiClient } from '@/app/utils/api';
+import AdminPagination from '@/components/admin/AdminPagination';
 
 // --- TYPES ---
 interface Order {
@@ -40,6 +41,8 @@ export default function OrderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -74,6 +77,9 @@ export default function OrderManagementPage() {
            vehicleName.includes(term) ||
            postingTitle.includes(term);
   });
+
+  // Pagination logic
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (loading) {
     return (
@@ -113,16 +119,11 @@ export default function OrderManagementPage() {
                     />
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
-                <div className="flex">
-                    <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm transition-all shadow-emerald-200">
-                        <Plus size={18} /> Add Order
-                    </button>
-                </div>
             </div>
 
             {/* Results Count */}
             <div className="mb-4 text-sm text-gray-600">
-                Showing {filteredOrders.length} of {orders.length} orders
+                Showing {paginatedOrders.length} of {filteredOrders.length} orders
                 {searchTerm && ` for "${searchTerm}"`}
             </div>
 
@@ -141,7 +142,7 @@ export default function OrderManagementPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {filteredOrders.map((order) => (
+                        {paginatedOrders.map((order) => (
                             <tr key={order._id} className="hover:bg-gray-50 transition-colors group">
                                 <td className="p-4 text-left pl-6">
                                     <span className="text-sm font-mono font-medium text-gray-500">{`#${order._id.slice(-6).toUpperCase()}`}</span>
@@ -216,11 +217,8 @@ export default function OrderManagementPage() {
                                           title="View Order Details"
                                         >
                                           <Eye size={18} />
-                                          <span className="text-sm font-medium">View</span>
+                                          <span className="text-sm font-medium"></span>
                                         </Link>
-                                        <button className="inline-flex items-center justify-center p-1.5 hover:bg-gray-100 hover:text-gray-600 rounded-md transition-colors">
-                                            <Trash2 size={18} />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -230,22 +228,12 @@ export default function OrderManagementPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex flex-col sm:flex-row justify-between items-center p-6 border-t border-gray-100 gap-4 mt-2">
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    <ChevronLeft size={16} /> Previous
-                </button>
-                
-                <div className="flex gap-2">
-                    <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-200">1</button>
-                    <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm transition-colors">2</button>
-                    <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm transition-colors">3</button>
-                    <span className="w-9 h-9 flex items-center justify-center text-gray-400">...</span>
-                </div>
-
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Next <ChevronRight size={16} />
-                </button>
-            </div>
+            <AdminPagination 
+              currentPage={currentPage} 
+              totalItems={filteredOrders.length} 
+              itemsPerPage={itemsPerPage} 
+              onPageChange={setCurrentPage} 
+            />
 
         </div>
     </div>

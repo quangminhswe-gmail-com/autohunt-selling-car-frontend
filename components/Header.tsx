@@ -11,13 +11,16 @@ interface Notification {
   _id: string;
   title: string;
   message: string;
-  targetRole: string;
-  createdAt: string;
-  createdBy: {
+  targetRole: 'all' | 'customer';
+  targetUserId?: string;
+  createdBy: string | {
     _id: string;
     fullName?: string;
     email?: string;
   };
+  isSent: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function Header() {

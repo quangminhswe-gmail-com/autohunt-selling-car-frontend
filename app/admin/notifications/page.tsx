@@ -1,25 +1,177 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Bell, Send, Users, FileText, CheckCircle, Clock, Search, 
-  Filter, ChevronLeft, ChevronRight, AlertTriangle, Info, Tag 
+  Bell, Send, Users, CheckCircle, Clock, Search, 
+  Filter, ChevronRight, Tag, Trash2, Loader
 } from 'lucide-react';
+import { apiClient } from '@/app/utils/api';
+import AdminPagination from '@/components/admin/AdminPagination';
+
+interface Notification {
+  _id: string;
+  title: string;
+  message: string;
+  targetRole: 'all' | 'customer';
+  targetUserId?: string;
+  createdBy: string;
+  isSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface NotificationFormData {
+  targetRole: 'all' | 'customer';
+  targetUserId: string;
+  title: string;
+  message: string;
+}
 
 export default function NotificationPage() {
-  // Mock data (Translated to English)
-  const history = [
-    { id: 1, title: 'System Maintenance 02/02', recipient: 'All Users', type: 'System', date: '2024-02-01 10:00', status: 'Sent', readCount: 1540 },
-    { id: 2, title: 'Listing Violation Warning', recipient: 'User: nguyenvanb', type: 'Warning', date: '2024-02-02 08:30', status: 'Read', readCount: 1 },
-    { id: 3, title: 'Lunar New Year Promo Pack', recipient: 'Group: Sellers', type: 'Promotion', date: '2024-01-20 09:00', status: 'Sent', readCount: 450 },
-    { id: 4, title: 'Privacy Policy Update', recipient: 'All Users', type: 'System', date: '2024-01-15 14:00', status: 'Sent', readCount: 1200 },
-    { id: 5, title: 'Account Verification Request', recipient: 'User: levanC', type: 'Warning', date: '2024-01-10 09:15', status: 'Unread', readCount: 0 },
-  ];
+  const [history, setHistory] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Form state
+  const [formData, setFormData] = useState<NotificationFormData>({
+    targetRole: 'all',
+    targetUserId: '',
+    title: '',
+    message: '',
+  });
+
+  // Fetch notification logs
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiClient<Notification[]>('/admin/notifications/logs', {
+          method: 'GET',
+        });
+        setHistory(Array.isArray(data) ? data : []);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to fetch notifications';
+        setError(message);
+        console.error('Error fetching notifications:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
+  // Handle form submission
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim() || !formData.message.trim()) {
+      setError('Title and message are required');
+      return;
+    }
+
+    if (formData.targetRole === 'customer' && !formData.targetUserId.trim()) {
+      setError('Target User ID is required for customer notifications');
+      return;
+    }
+
+    try {
+      setSending(true);
+      setError(null);
+
+      const payload: {
+        targetRole: Notification['targetRole'];
+        title: string;
+        message: string;
+        targetUserId?: string;
+      } = {
+        targetRole: formData.targetRole,
+        title: formData.title,
+        message: formData.message,
+      };
+
+      if (formData.targetRole === 'customer' && formData.targetUserId.trim()) {
+        payload.targetUserId = formData.targetUserId.trim();
+      }
+
+      const response = await apiClient<Notification>('/admin/notifications', {
+        method: 'POST',
+        body: payload,
+      });
+
+      // Add new notification to history
+      if (response) {
+        setHistory((prev) => [response, ...prev]);
+      }
+
+      // Reset form
+      setFormData({
+        targetRole: 'all',
+        targetUserId: '',
+        title: '',
+        message: '',
+      });
+
+      // Show success message (optional toast)
+      console.log('Notification sent successfully');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send notification';
+      setError(message);
+      console.error('Error sending notification:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Handle delete notification
+  const handleDeleteNotification = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this notification?')) {
+      return;
+    }
+
+    try {
+      await apiClient(`/admin/notifications/${id}`, {
+        method: 'DELETE',
+      });
+
+      // Remove from history
+      setHistory((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete notification';
+      setError(message);
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  // Filter history
+  const filteredHistory = history.filter((item) => {
+    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.message.toLowerCase().includes(searchTerm.toLowerCase());
+    const itemStatus = item.isSent ? 'Sent' : 'Pending';
+    const matchesStatus = statusFilter === 'All' || itemStatus === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination logic
+  const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="bg-[#F8F9FA] min-h-screen font-sans text-gray-800 p-6 flex flex-col xl:flex-row gap-6">
       {/* --- LEFT COLUMN: HISTORY LIST (65-70%) --- */}
       <div className="flex-1 flex flex-col gap-6">
+        {/* Error Alert */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* Table Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1 flex flex-col">
           {/* Filter Toolbar */}
@@ -31,19 +183,33 @@ export default function NotificationPage() {
               <input 
                 type="text" 
                 placeholder="Search notification ..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                 />
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
             <div className="flex gap-2 w-full xl:w-auto">
-              <select className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none cursor-pointer flex-1">
-                <option>Status: All</option>
-                <option>Status: Paid</option>
-                <option>Status: Pending</option>
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none cursor-pointer flex-1"
+              >
+                <option>All</option>
+                <option>Sent</option>
+                <option>Pending</option>
               </select>
             </div>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Loading State */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader className="w-6 h-6 text-emerald-500 animate-spin" />
+              <span className="ml-2 text-gray-600">Loading notifications...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
               <table className="w-full text-left rounded-xl">
                 <thead className="bg-[#EBF7F1]">
                   <tr>
@@ -51,61 +217,78 @@ export default function NotificationPage() {
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Target</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Type</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Stats</th>
-                    <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider text-center rounded-r-md">Status</th>
+                    <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider text-center">Status</th>
+                    <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider text-center rounded-r-md">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {history.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors group cursor-pointer">
-                      <td className="p-4">
-                        <p className="font-medium text-gray-800 group-hover:text-emerald-600 transition-colors">{item.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{item.date}</p>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                           <Users className="w-4 h-4 text-gray-400" />
-                           {item.recipient}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
-                          item.type === 'System' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                          item.type === 'Warning' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                          'bg-purple-50 text-purple-700 border-purple-100'
-                        }`}>
-                          {item.type === 'System' && <Info size={12} />}
-                          {item.type === 'Warning' && <AlertTriangle size={12} />}
-                          {item.type === 'Promotion' && <Tag size={12} />}
-                          {item.type}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {item.readCount > 1 ? `${item.readCount} viewed` : 'No views yet'}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-center">
-                          {item.status === 'Sent' || item.status === 'Read' ? 
-                            <CheckCircle className="w-5 h-5 text-emerald-500" /> : 
-                            <Clock className="w-5 h-5 text-amber-500" />
-                          }
-                        </div>
+                  {paginatedHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-gray-500">
+                        No notifications found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedHistory.map((item) => (
+                      <tr key={item._id} className="hover:bg-gray-50 transition-colors group cursor-pointer">
+                        <td className="p-4">
+                          <p className="font-medium text-gray-800 group-hover:text-emerald-600 transition-colors">{item.title}</p>
+                          <p className="text-xs text-gray-500 mt-1">{new Date(item.createdAt).toLocaleString()}</p>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-gray-400" />
+                              {item.targetRole === 'all' ? 'All Users' : 'Customers'}
+                            </div>
+                            {item.targetUserId && (
+                              <div className="text-xs text-gray-500">User ID: {item.targetUserId}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-100">
+                            <Tag size={12} />
+                            Notification
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-gray-600">
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">{item.message.substring(0, 40)}...</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-center">
+                            {item.isSent ? 
+                              <CheckCircle className="w-5 h-5 text-emerald-500" /> : 
+                              <Clock className="w-5 h-5 text-amber-500" />
+                            }
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleDeleteNotification(item._id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete notification"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
            </div>
+          )}
 
            {/* Pagination */}
-           <div className="flex justify-between items-center pt-4 mt-auto border-t border-gray-100">
-              <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                  <ChevronLeft size={16} /> Prev
-              </button>
-              <div className="text-sm text-gray-500">Page 1 of 5</div>
-              <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                  Next <ChevronRight size={16} />
-              </button>
-           </div>
+           <AdminPagination 
+             currentPage={currentPage} 
+             totalItems={filteredHistory.length} 
+             itemsPerPage={itemsPerPage} 
+             onPageChange={setCurrentPage} 
+           />
         </div>
       </div>
 
@@ -117,17 +300,19 @@ export default function NotificationPage() {
             Compose Notification
           </h2>
 
-          <form className="flex flex-col gap-5">
+          <form onSubmit={handleSendNotification} className="flex flex-col gap-5">
             
             {/* Target Select */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target Audience</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target Role</label>
               <div className="relative">
-                <select className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none">
-                  <option>All Users (Broadcast)</option>
-                  <option>All Sellers</option>
-                  <option>All Buyers</option>
-                  <option>Specific User ID...</option>
+                <select 
+                  value={formData.targetRole}
+                  onChange={(e) => setFormData({...formData, targetRole: e.target.value as NotificationFormData['targetRole']})}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none"
+                >
+                  <option value="all">All Users</option>
+                  <option value="customer">Customers</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                   <ChevronRight size={16} className="rotate-90" />
@@ -135,40 +320,40 @@ export default function NotificationPage() {
               </div>
             </div>
 
-            {/* Notification Type */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Type</label>
-              <div className="grid grid-cols-3 gap-2">
-                {['Info', 'Promo', 'Alert'].map(t => (
-                  <button type="button" key={t} className="border border-gray-200 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 rounded-lg py-2 text-xs font-medium transition-all text-gray-600">
-                    {t}
-                  </button>
-                ))}
+            {formData.targetRole === 'customer' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target User ID</label>
+                <input
+                  type="text"
+                  value={formData.targetUserId}
+                  onChange={(e) => setFormData({...formData, targetUserId: e.target.value})}
+                  placeholder="Example: 69c17772a4a47726b28ea523"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
               </div>
-            </div>
+            )}
 
             {/* Content Inputs */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Title</label>
-              <input type="text" placeholder="e.g., Special Holiday Offer!" className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              <input 
+                type="text" 
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                placeholder="e.g., Special Holiday Offer!" 
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" 
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Message Body</label>
-              <textarea rows={4} placeholder="Type your message here..." className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none" />
-            </div>
-
-            {/* Reference/Action Link */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Link Action (Optional)</label>
-              <div className="flex gap-2">
-                <select className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm w-1/3 outline-none text-gray-700">
-                  <option>None</option>
-                  <option>Vehicle</option>
-                  <option>Posting</option>
-                </select>
-                <input type="text" placeholder="Object ID" className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
-              </div>
+              <textarea 
+                rows={4} 
+                value={formData.message}
+                onChange={(e) => setFormData({...formData, message: e.target.value})}
+                placeholder="Type your message here..." 
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none" 
+              />
             </div>
 
             {/* Preview Box */}
@@ -179,16 +364,40 @@ export default function NotificationPage() {
                   <Bell className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-800">Special Holiday Offer!</p>
-                  <p className="text-xs text-gray-500 mt-1 leading-snug">Get 50% off on all listing fees during the holiday season...</p>
+                  <p className="text-sm font-bold text-gray-800">{formData.title || 'Special Holiday Offer!'}</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-snug">{formData.message || 'Get 50% off on all listing fees during the holiday season...'}</p>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="pt-2 flex gap-3">
-              <button type="button" className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 font-medium transition-colors">Save Draft</button>
-              <button type="button" className="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-md shadow-emerald-200 transition-colors">Send Now</button>
+              <button 
+                type="button" 
+                onClick={() => setFormData({
+                  targetRole: 'all',
+                  targetUserId: '',
+                  title: '',
+                  message: '',
+                })}
+                className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 font-medium transition-colors"
+              >
+                Clear Draft
+              </button>
+              <button 
+                type="submit" 
+                disabled={sending}
+                className="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-bold shadow-md shadow-emerald-200 transition-colors flex items-center justify-center gap-2"
+              >
+                {sending ? (
+                  <>
+                    <Loader size={16} className="animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Now'
+                )}
+              </button>
             </div>
 
           </form>

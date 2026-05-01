@@ -47,11 +47,6 @@ export default function FinancialPage() {
                 <p className="text-sm text-gray-500 mt-1">Revenue & Expense tracking for graduation project.</p>
             </div>
             
-            <div className="flex">
-                <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm transition-all shadow-emerald-200">
-                    <Plus size={18} /> Add Record
-                </button>
-            </div>
         </div>
 
         {/* --- KPI CARDS --- */}
