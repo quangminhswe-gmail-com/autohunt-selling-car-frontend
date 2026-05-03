@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, Send, Users, CheckCircle, Clock, Search, 
-  Filter, ChevronRight, Tag, Trash2, Loader
+  Filter, ChevronRight, Trash2, Loader
 } from 'lucide-react';
 import { apiClient } from '@/app/utils/api';
 import AdminPagination from '@/components/admin/AdminPagination';
@@ -13,7 +13,10 @@ interface Notification {
   title: string;
   message: string;
   targetRole: 'all' | 'customer';
-  targetUserId?: string;
+  targetUserId?: {
+    _id: string;
+    email: string;
+  } | null;
   createdBy: string;
   isSent: boolean;
   createdAt: string;
@@ -22,7 +25,7 @@ interface Notification {
 
 interface NotificationFormData {
   targetRole: 'all' | 'customer';
-  targetUserId: string;
+  targetEmail: string;
   title: string;
   message: string;
 }
@@ -40,7 +43,7 @@ export default function NotificationPage() {
   // Form state
   const [formData, setFormData] = useState<NotificationFormData>({
     targetRole: 'all',
-    targetUserId: '',
+    targetEmail: '',
     title: '',
     message: '',
   });
@@ -76,8 +79,8 @@ export default function NotificationPage() {
       return;
     }
 
-    if (formData.targetRole === 'customer' && !formData.targetUserId.trim()) {
-      setError('Target User ID is required for customer notifications');
+    if (formData.targetRole === 'customer' && !formData.targetEmail.trim()) {
+      setError('Target Email is required for customer notifications');
       return;
     }
 
@@ -89,15 +92,15 @@ export default function NotificationPage() {
         targetRole: Notification['targetRole'];
         title: string;
         message: string;
-        targetUserId?: string;
+        targetEmail?: string;
       } = {
         targetRole: formData.targetRole,
         title: formData.title,
         message: formData.message,
       };
 
-      if (formData.targetRole === 'customer' && formData.targetUserId.trim()) {
-        payload.targetUserId = formData.targetUserId.trim();
+      if (formData.targetRole === 'customer' && formData.targetEmail.trim()) {
+        payload.targetEmail = formData.targetEmail.trim();
       }
 
       const response = await apiClient<Notification>('/admin/notifications', {
@@ -105,15 +108,24 @@ export default function NotificationPage() {
         body: payload,
       });
 
-      // Add new notification to history
+      // Add new notification to history.
+      // If the backend did not populate targetUserId, use the entered email immediately.
       if (response) {
-        setHistory((prev) => [response, ...prev]);
+        const newNotification = {
+          ...response,
+          targetUserId:
+            response.targetRole === 'customer' && !response.targetUserId
+              ? { _id: '', email: formData.targetEmail.trim() }
+              : response.targetUserId,
+        } as Notification;
+
+        setHistory((prev) => [newNotification, ...prev]);
       }
 
       // Reset form
       setFormData({
         targetRole: 'all',
-        targetUserId: '',
+        targetEmail: '',
         title: '',
         message: '',
       });
@@ -215,7 +227,7 @@ export default function NotificationPage() {
                   <tr>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider rounded-l-md">Detail</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Target</th>
-                    <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Type</th>
+                    <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Email</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider">Stats</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider text-center">Status</th>
                     <th className="p-4 text-xs font-semibold text-emerald-900 uppercase tracking-wider text-center rounded-r-md">Action</th>
@@ -236,21 +248,17 @@ export default function NotificationPage() {
                           <p className="text-xs text-gray-500 mt-1">{new Date(item.createdAt).toLocaleString()}</p>
                         </td>
                         <td className="p-4">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 text-gray-400" />
-                              {item.targetRole === 'all' ? 'All Users' : 'Customers'}
-                            </div>
-                            {item.targetUserId && (
-                              <div className="text-xs text-gray-500">User ID: {item.targetUserId}</div>
-                            )}
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            {item.targetRole === 'all' ? 'All Users' : 'Customers'}
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-100">
-                            <Tag size={12} />
-                            Notification
-                          </span>
+                          {item.targetRole === 'customer' && item.targetUserId ? (
+                            <span className="text-sm text-gray-600">{item.targetUserId.email}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">N/A</span>
+                          )}
                         </td>
                         <td className="p-4 text-sm text-gray-600">
                           <span className="px-2 py-1 bg-gray-100 rounded text-xs">{item.message.substring(0, 40)}...</span>
@@ -279,7 +287,7 @@ export default function NotificationPage() {
                   )}
                 </tbody>
               </table>
-           </div>
+            </div>
           )}
 
            {/* Pagination */}
@@ -322,12 +330,12 @@ export default function NotificationPage() {
 
             {formData.targetRole === 'customer' && (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target User ID</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target Email</label>
                 <input
-                  type="text"
-                  value={formData.targetUserId}
-                  onChange={(e) => setFormData({...formData, targetUserId: e.target.value})}
-                  placeholder="Example: 69c17772a4a47726b28ea523"
+                  type="email"
+                  value={formData.targetEmail}
+                  onChange={(e) => setFormData({...formData, targetEmail: e.target.value})}
+                  placeholder="Example: user@example.com"
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 />
               </div>
@@ -376,7 +384,7 @@ export default function NotificationPage() {
                 type="button" 
                 onClick={() => setFormData({
                   targetRole: 'all',
-                  targetUserId: '',
+                  targetEmail: '',
                   title: '',
                   message: '',
                 })}
