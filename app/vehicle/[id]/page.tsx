@@ -7,6 +7,7 @@ import { apiClient } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
+import { buildLoginUrl, isLoggedIn } from '@/app/utils/auth';
 
 /* ================= TYPES ================= */
 interface Vehicle {
@@ -171,6 +172,10 @@ export default function VehicleDetailsPage() {
   const router = useRouter();
 
   const handleContactSeller = async (carId: number | string) => {
+    if (!isLoggedIn()) {
+      window.location.href = buildLoginUrl(`/vehicle/${id}`);
+      return;
+    }
     if (!posting?.ownerId?._id) {
       showErrorNotification('Error', 'Seller information is unavailable.');
       return;
@@ -200,6 +205,10 @@ export default function VehicleDetailsPage() {
   };
 
   const handleBuy = () => {
+    if (!isLoggedIn()) {
+      window.location.href = buildLoginUrl(`/vehicle/${id}/buy`);
+      return;
+    }
     if (id) {
       router.push(`/vehicle/${id}/buy`);
     }
@@ -572,7 +581,13 @@ export default function VehicleDetailsPage() {
                   Contact Seller
                 </button>
                 <button
-                  onClick={() => setShowSellerProfile(true)}
+                  onClick={() => {
+                    if (!isLoggedIn()) {
+                      window.location.href = buildLoginUrl(`/vehicle/${id}`);
+                      return;
+                    }
+                    setShowSellerProfile(true);
+                  }}
                   className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   View Profile

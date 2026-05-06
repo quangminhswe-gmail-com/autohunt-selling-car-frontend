@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BellIcon } from "./icons/Icons";
 import { apiClient } from "@/app/utils/api";
+import { buildLoginUrl } from "@/app/utils/auth";
 
 interface Notification {
   _id: string;
@@ -188,7 +189,7 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-8 text-[#006557] font-bold">
               <Link href="/">Home</Link>
               <Link href="/vehicles">Browse Cars</Link>
-              <Link href="/sell">Sell Cars</Link>
+              <Link href={isLoggedIn ? "/sell" : buildLoginUrl("/sell")}>Sell Cars</Link>
               <Link href="/about">About</Link>
               <Link href="/contact">Contact</Link>
               <Link href="/support">Support</Link>

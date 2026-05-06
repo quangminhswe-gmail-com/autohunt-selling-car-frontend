@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
+import { buildLoginUrl, isLoggedIn } from '@/app/utils/auth';
 
 interface Vehicle {
   id: string;
@@ -100,6 +101,10 @@ export default function VehiclesPage() {
   const itemsPerPage = 12;
 
   const startConversationWithPosting = async (postingId: string) => {
+    if (!isLoggedIn()) {
+      window.location.href = buildLoginUrl(`/vehicle/${postingId}`);
+      return;
+    }
     const shouldStart = window.confirm('Do you want to start a conversation with the seller?');
     if (!shouldStart) return;
 
@@ -906,7 +911,13 @@ export default function VehiclesPage() {
                     image={posting.vehicle.images?.[0] || '/default-car.png'}
                     href={`/vehicle/${posting._id}`}
                     onContact={() => startConversationWithPosting(posting._id)}
-                    onBuy={(id) => (window.location.href = `/vehicle/${id}/buy`) }
+                    onBuy={(id) => {
+                      if (!isLoggedIn()) {
+                        window.location.href = buildLoginUrl(`/vehicle/${id}/buy`);
+                        return;
+                      }
+                      window.location.href = `/vehicle/${id}/buy`;
+                    }}
                     variant="grid"
                     currency="VND"
                   >
@@ -976,6 +987,10 @@ export default function VehiclesPage() {
                         <button
                           onClick={(e) => {
                             e.preventDefault();
+                            if (!isLoggedIn()) {
+                              window.location.href = buildLoginUrl(`/vehicle/${posting._id}/buy`);
+                              return;
+                            }
                             window.location.href = `/vehicle/${posting._id}/buy`;
                           }}
                           className="px-3 py-1 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-xs"

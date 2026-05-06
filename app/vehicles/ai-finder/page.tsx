@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import { apiClient } from '@/app/utils/api';
+import { buildLoginUrl, getAuthToken } from '@/app/utils/auth';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
 
@@ -83,6 +85,8 @@ interface BuyerProfileForm {
 }
 
 export default function AiFinderPage() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const [allPostings, setAllPostings] = useState<Posting[]>([]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [savedSearches, setSavedSearches] = useState<BuyerSearch[]>([]);
@@ -108,6 +112,16 @@ export default function AiFinderPage() {
     usagePurpose: '',
   });
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = getAuthToken();
+    if (!token) {
+      router.replace(buildLoginUrl('/vehicles/ai-finder'));
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
   const hasEnoughCriteria = useMemo(() => {
     return Boolean(form.preferredBrand.trim() || form.model.trim() || form.preferredType.trim());
   }, [form.preferredBrand, form.model, form.preferredType]);
@@ -126,6 +140,8 @@ export default function AiFinderPage() {
   };
 
   useEffect(() => {
+    if (!authChecked) return;
+
     const fetchPostings = async () => {
       setLoadingData(true);
       try {
@@ -145,10 +161,10 @@ export default function AiFinderPage() {
     };
 
     fetchPostings();
-  }, []);
+  }, [authChecked]);
 
   const fetchBuyerSearches = async () => {
-    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+    if (!authChecked) {
       setSavedSearches([]);
       return;
     }
@@ -165,8 +181,9 @@ export default function AiFinderPage() {
   };
 
   useEffect(() => {
+    if (!authChecked) return;
     fetchBuyerSearches();
-  }, []);
+  }, [authChecked]);
 
   useEffect(() => {
     const hydrateMatchedResults = async () => {
@@ -208,7 +225,7 @@ export default function AiFinderPage() {
   }, [savedSearches]);
 
   const fetchUserSettings = async () => {
-    if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+    if (!authChecked) {
       return;
     }
 
@@ -244,8 +261,9 @@ export default function AiFinderPage() {
   };
 
   useEffect(() => {
+    if (!authChecked) return;
     fetchUserSettings();
-  }, []);
+  }, [authChecked]);
 
   const readSellerFromPostingDetails = async (postingId: string) => {
     const details = await apiClient<Posting>(`/postings/details/${postingId}`);
@@ -468,6 +486,14 @@ export default function AiFinderPage() {
       showErrorNotification('Bulk delete failed', (err as Error).message || 'Unable to clear matched requests.');
     }
   };
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <p className="text-lg">Redirecting to login...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

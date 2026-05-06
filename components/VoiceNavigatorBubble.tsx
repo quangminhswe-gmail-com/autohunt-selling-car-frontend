@@ -194,7 +194,7 @@ export default function VoiceNavigatorBubble() {
     };
 
     const routes = VOICE_ROUTES
-      .filter((r) => r.path && r.title)
+      .filter((r) => r.path && r.title && !r.path.startsWith('/admin'))
       .map((r) => {
         const viTitle = titleFromPathVi(r.path, r.title);
         const legacyPhrases = buildPhrasesLegacy(r.title);
@@ -213,14 +213,6 @@ export default function VoiceNavigatorBubble() {
           legacyCount: legacyPhrases.length,
         };
       });
-
-    // Prefer user-facing routes first (non-admin), then admin routes
-    routes.sort((a, b) => {
-      const aAdmin = a.path.startsWith('/admin') ? 1 : 0;
-      const bAdmin = b.path.startsWith('/admin') ? 1 : 0;
-      if (aAdmin !== bAdmin) return aAdmin - bAdmin;
-      return a.path.localeCompare(b.path);
-    });
 
     return routes;
   }, []);

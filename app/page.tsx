@@ -14,6 +14,7 @@ import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
+import { buildLoginUrl, isLoggedIn } from '@/app/utils/auth';
 
 
 interface ApiVehicle {
@@ -72,6 +73,10 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleContactSeller = async (carId: string) => {
+    if (!isLoggedIn()) {
+      window.location.href = buildLoginUrl(`/vehicle/${carId}`);
+      return;
+    }
     const shouldStart = window.confirm('Do you want to start a conversation with the seller?');
     if (!shouldStart) return;
 
@@ -205,7 +210,13 @@ export default function HomePage() {
                   image={car.image}
                   href={car.targetHref}
                   onContact={handleContactSeller}
-                  onBuy={(id) => (window.location.href = `/vehicle/${id}/buy`)}
+                  onBuy={(id) => {
+                    if (!isLoggedIn()) {
+                      window.location.href = buildLoginUrl(`/vehicle/${id}/buy`);
+                      return;
+                    }
+                    window.location.href = `/vehicle/${id}/buy`;
+                  }}
                   variant="grid"
                   currency={car.currency}
                 />
