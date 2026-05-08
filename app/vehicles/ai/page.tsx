@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 
 type ChatMode = 'find' | 'sell' | null;
@@ -129,12 +129,21 @@ export default function AiVehicleSearchPage() {
   };
 
   const readSellerFromPostingDetails = async (postingId: string) => {
-    const details = await apiClient<Posting>(`/postings/details/${postingId}`);
-    const owner = details.ownerId;
-    if (!owner || typeof owner === 'string') {
+    try {
+      const details = await apiClient<Posting>(`/postings/details/${postingId}`);
+      const owner = details.ownerId;
+      if (!owner || typeof owner === 'string') {
+        return null;
+      }
+      return owner;
+    } catch (err) {
+      // Handle 401 Unauthorized silently and return null
+      if (err instanceof ApiError && err.statusCode === 401) {
+        return null;
+      }
+      console.error('Failed to fetch posting details:', err);
       return null;
     }
-    return owner;
   };
 
   const startConversationWithSeller = async (sellerId: string) => {

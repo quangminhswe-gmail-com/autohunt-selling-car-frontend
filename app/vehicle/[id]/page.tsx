@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import Footer from '@/components/Footer';
 import ReadyToSell from '@/components/ReadyToSell';
@@ -261,6 +261,13 @@ export default function VehicleDetailsPage() {
         }
       } catch (err) {
         console.error('Failed to load posting details', err);
+        
+        // Handle 401 Unauthorized - redirect to login
+        if (err instanceof ApiError && err.statusCode === 401) {
+          window.location.href = buildLoginUrl(`/vehicle/${id}`);
+          return;
+        }
+        
         setError((err as Error).message || 'Failed to load posting details');
       } finally {
         setLoading(false);

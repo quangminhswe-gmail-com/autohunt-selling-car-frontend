@@ -11,7 +11,7 @@ import WhyChooseAutoHunt from '@/components/WhyChooseAutoHunt';
 import HowItWorks from '@/components/HowItWorks';
 import ReadyToSell from '@/components/ReadyToSell';
 import Footer from '@/components/Footer';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
 import { buildLoginUrl, isLoggedIn } from '@/app/utils/auth';
@@ -101,6 +101,12 @@ export default function HomePage() {
 
       window.location.href = `/messages/${conversation._id}`;
     } catch (err) {
+      // Handle 401 Unauthorized - redirect to login
+      if (err instanceof ApiError && err.statusCode === 401) {
+        window.location.href = buildLoginUrl(`/vehicle/${carId}`);
+        return;
+      }
+      
       console.error('Failed to start conversation', err);
       showErrorNotification('Error', (err as Error).message || 'Unable to start conversation. Please try again.');
     }

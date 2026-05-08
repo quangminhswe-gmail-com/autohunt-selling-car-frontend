@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
 import { buildLoginUrl, isLoggedIn } from '@/app/utils/auth';
@@ -142,24 +142,14 @@ export default function VehiclesPage() {
         const data = await apiClient<Posting[]>('/postings');
         setPostings(data.filter((posting) => posting.status?.toLowerCase() === 'active'));
       } catch (err) {
-        const errorMessage = (err as Error).message;
-        if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
-          // If unauthorized, try fetching without authentication
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/postings`);
-            if (response.ok) {
-              const data = await response.json();
-              setPostings(data.filter((posting: Posting) => posting.status?.toLowerCase() === 'active'));
-              return;
-            }
-          } catch (fallbackErr) {
-            console.error('Failed to fetch postings even without auth:', fallbackErr);
-          }
-          setError('Please log in to view available vehicles.');
-        } else {
-          console.error('Failed to fetch postings', err);
-          setError((err as Error).message || 'Failed to load vehicles');
+        // Handle 401 Unauthorized - redirect to login
+        if (err instanceof ApiError && err.statusCode === 401) {
+          window.location.href = buildLoginUrl('/vehicles');
+          return;
         }
+        
+        console.error('Failed to fetch postings', err);
+        setError((err as Error).message || 'Failed to load vehicles');
       } finally {
         setLoading(false);
       }

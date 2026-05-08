@@ -6,7 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { buildLoginUrl, getAuthToken } from '@/app/utils/auth';
 import { showErrorNotification } from '@/utils/notifications';
 import CarCard from '@/components/CarCard';
@@ -266,10 +266,19 @@ export default function AiFinderPage() {
   }, [authChecked]);
 
   const readSellerFromPostingDetails = async (postingId: string) => {
-    const details = await apiClient<Posting>(`/postings/details/${postingId}`);
-    const owner = details.ownerId;
-    if (!owner || typeof owner === 'string') return null;
-    return owner;
+    try {
+      const details = await apiClient<Posting>(`/postings/details/${postingId}`);
+      const owner = details.ownerId;
+      if (!owner || typeof owner === 'string') return null;
+      return owner;
+    } catch (err) {
+      // Handle 401 Unauthorized silently and return null
+      if (err instanceof ApiError && err.statusCode === 401) {
+        return null;
+      }
+      console.error('Failed to fetch posting details:', err);
+      return null;
+    }
   };
 
   const startConversationWithSeller = async (sellerId: string) => {

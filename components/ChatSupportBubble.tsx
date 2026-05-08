@@ -25,8 +25,8 @@ interface MessageResponse {
 
 export default function ChatSupportBubble() {
   const [unreadCount, setUnreadCount] = useState(0);
-
-  const hasToken = useMemo(() => Boolean(getAuthToken()), []);
+  const [hasToken, setHasToken] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const currentUserId = useMemo(() => {
     if (typeof window === 'undefined') return null;
@@ -90,6 +90,12 @@ export default function ChatSupportBubble() {
   }, [currentUserId, getSeenMap]);
 
   useEffect(() => {
+    // Set hasToken after mounting to avoid hydration mismatch
+    setHasToken(Boolean(getAuthToken()));
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     refreshUnreadCount();
     const timer = window.setInterval(refreshUnreadCount, 15000);
     return () => window.clearInterval(timer);
@@ -98,7 +104,7 @@ export default function ChatSupportBubble() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex items-end gap-2">
       <Link
-        href={hasToken ? '/messages' : buildLoginUrl('/messages')}
+        href={isMounted && hasToken ? '/messages' : buildLoginUrl('/messages')}
         aria-label="Open Messages"
         className={`${bubbleBaseClasses} relative`}
       >
@@ -114,7 +120,7 @@ export default function ChatSupportBubble() {
       </Link>
 
       <Link
-        href={hasToken ? '/support/requests' : '/support'}
+        href={isMounted && hasToken ? '/support/requests' : '/support'}
         aria-label="Open Support"
         className={bubbleBaseClasses}
       >
