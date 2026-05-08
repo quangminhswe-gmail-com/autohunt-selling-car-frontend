@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
 import { showSuccessNotification } from '@/utils/notifications';
+import { buildLoginUrl, getAuthToken } from '@/app/utils/auth';
 
 interface ImageFile {
   file: File;
@@ -102,6 +103,13 @@ export default function SellCarPage() {
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      router.replace(buildLoginUrl('/sell'));
+    }
+  }, [router]);
 
   const buildVehicleFormData = () => {
     const multipart = new FormData();

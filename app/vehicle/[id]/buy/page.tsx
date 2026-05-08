@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { apiClient } from '@/app/utils/api';
 import { showSuccessNotification } from '@/utils/notifications';
+import { buildLoginUrl, getAuthToken } from '@/app/utils/auth';
 
 interface Vehicle {
   id: string;
@@ -77,7 +78,7 @@ export default function VehicleBuyPage() {
 
     const loadProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = getAuthToken();
         if (!token) return;
 
         const profile = await apiClient<{
@@ -98,6 +99,13 @@ export default function VehicleBuyPage() {
     loadPosting();
     loadProfile();
   }, [id]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      router.replace(buildLoginUrl(`/vehicle/${id}/buy`));
+    }
+  }, [id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
