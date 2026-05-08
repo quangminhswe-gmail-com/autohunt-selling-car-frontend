@@ -27,6 +27,13 @@ interface ApiOptions extends RequestInit {
     headers?: Record<string, string>;
 }
 
+export class ApiError extends Error {
+    constructor(public statusCode: number, message: string) {
+        super(message);
+        this.name = 'ApiError';
+    }
+}
+
 export const apiClient = async <T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
     const { body, headers, ...customConfig } = options;
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -57,7 +64,7 @@ export const apiClient = async <T = any>(endpoint: string, options: ApiOptions =
                 const text = Array.isArray(msg)
                     ? msg.join('. ')
                     : (typeof msg === 'string' ? msg : null);
-                throw new Error(text || `Error ${response.status}: ${response.statusText}`);
+                throw new ApiError(response.status, text || `Error ${response.status}: ${response.statusText}`);
             }
 
             // Handle empty-body responses (e.g., DELETE endpoints or 204 No Content).

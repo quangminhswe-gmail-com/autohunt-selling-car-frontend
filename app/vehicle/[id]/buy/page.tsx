@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { apiClient } from '@/app/utils/api';
+import { apiClient, ApiError } from '@/app/utils/api';
 import { showSuccessNotification } from '@/utils/notifications';
 import { buildLoginUrl, getAuthToken } from '@/app/utils/auth';
 
@@ -70,6 +70,13 @@ export default function VehicleBuyPage() {
         setAgreedPrice(`${data.price}`);
       } catch (err) {
         console.error('Error fetching posting', err);
+        
+        // Handle 401 Unauthorized - redirect to login
+        if (err instanceof ApiError && err.statusCode === 401) {
+          window.location.href = buildLoginUrl(`/vehicle/${id}/buy`);
+          return;
+        }
+        
         setError((err as Error).message || 'Cannot load posting details.');
       } finally {
         setLoading(false);
