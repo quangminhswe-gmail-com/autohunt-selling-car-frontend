@@ -134,6 +134,14 @@ export const VOICE_ROUTES: VoiceRouteRecord[] = [
     ]
   },
   {
+    "path": "/identify-car",
+    "title": "Identify car",
+    "keywords": [
+      "identify",
+      "car"
+    ]
+  },
+  {
     "path": "/login",
     "title": "Login",
     "keywords": [

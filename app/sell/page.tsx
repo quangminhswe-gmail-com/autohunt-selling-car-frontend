@@ -403,6 +403,7 @@ export default function SellCarPage() {
                       <option value="Toyota">Toyota</option>
                       <option value="Volkswagen">Volkswagen</option>
                       <option value="Volvo">Volvo</option>
+                      <option value="Vinfast">Vinfast</option>
                     </select>
                   </div>
 
