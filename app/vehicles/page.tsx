@@ -354,19 +354,46 @@ export default function VehiclesPage() {
   ];
 
   // Combine database brands with popular brands, remove duplicates
-  const allMakes = Array.from(new Set([...popularBrands, ...makes])).sort();
+  const normalizeValue = (value: string) => value.trim().toLowerCase();
+
+  const uniqueCaseInsensitive = (items: string[]) => {
+    const seen = new Map<string, string>();
+    for (const item of items) {
+      const normalized = normalizeValue(item);
+      if (normalized && !seen.has(normalized)) {
+        seen.set(normalized, item.trim());
+      }
+    }
+    return Array.from(seen.values());
+  };
+
+  const allMakes = uniqueCaseInsensitive([...popularBrands, ...makes]).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
 
   const allYears = Array.from(new Set(postings.map((p) => p.vehicle.yearOfManufacture))).sort(
     (a, b) => b - a
   );
-  const types = Array.from(new Set(postings.map((p) => p.vehicle.type))).sort();
-  const transmissions = Array.from(new Set(postings.map((p) => p.vehicle.transmission))).sort();
-  const fuelTypes = Array.from(new Set(postings.map((p) => p.vehicle.fuelType))).sort();
+  const types = uniqueCaseInsensitive(postings.map((p) => p.vehicle.type)).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+  const transmissions = uniqueCaseInsensitive(postings.map((p) => p.vehicle.transmission)).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+  const fuelTypes = uniqueCaseInsensitive(postings.map((p) => p.vehicle.fuelType)).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
 
-  // Combine database values with popular options, remove duplicates
-  const allTypes = Array.from(new Set([...popularBodyTypes, ...types])).sort();
-  const allTransmissions = Array.from(new Set([...popularTransmissions, ...transmissions])).sort();
-  const allFuelTypes = Array.from(new Set([...popularFuelTypes, ...fuelTypes])).sort();
+  // Combine database values with popular options, remove duplicates case-insensitively
+  const allTypes = uniqueCaseInsensitive([...popularBodyTypes, ...types]).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+  const allTransmissions = uniqueCaseInsensitive([...popularTransmissions, ...transmissions]).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+  const allFuelTypes = uniqueCaseInsensitive([...popularFuelTypes, ...fuelTypes]).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
 
   // Filter makes based on search
   const filteredMakes = allMakes.filter((make) =>
@@ -393,9 +420,9 @@ export default function VehiclesPage() {
     }));
   };
 
-  // Helper function to capitalize first letter and lowercase the rest
-  const capitalizeFirst = (str: string) => {
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  // Helper function to normalize option labels for display
+  const formatOptionLabel = (str: string) => {
+    return str.trim();
   };
 
   const handleMakeChange = (make: string) => {
@@ -470,6 +497,12 @@ export default function VehiclesPage() {
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium hover:from-emerald-400 hover:to-teal-400 transition-colors shadow-sm"
               >
                 <span>Smart Car Finder</span>
+              </Link>
+              <Link
+                href="/identify-car"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium hover:from-blue-400 hover:to-cyan-400 transition-colors shadow-sm"
+              >
+                <span>AI Car Identifier</span>
               </Link>
             </div>
           </div>
@@ -627,7 +660,7 @@ export default function VehiclesPage() {
                                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                 />
                                 <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                  {capitalizeFirst(make)}
+                                  {formatOptionLabel(make)}
                                   {isAvailable && (
                                     <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" title="Available in inventory"></span>
                                   )}
@@ -673,7 +706,9 @@ export default function VehiclesPage() {
                     {expandedSections.type && (
                       <div className="mt-3 space-y-2">
                         {allTypes.slice(0, showMoreItems.type ? allTypes.length : 6).map((type) => {
-                          const isAvailable = types.includes(type);
+                          const isAvailable = types.some(
+                            (availableType) => normalizeValue(availableType) === normalizeValue(type)
+                          );
                           return (
                             <label key={type} className="flex items-center cursor-pointer">
                               <input
@@ -683,7 +718,7 @@ export default function VehiclesPage() {
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
                               <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                {capitalizeFirst(type)}
+                                {formatOptionLabel(type)}
                                 {isAvailable && (
                                   <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" title="Available in inventory"></span>
                                 )}
@@ -728,7 +763,9 @@ export default function VehiclesPage() {
                     {expandedSections.transmission && (
                       <div className="mt-3 space-y-2">
                         {allTransmissions.slice(0, showMoreItems.transmission ? allTransmissions.length : 4).map((transmission) => {
-                          const isAvailable = transmissions.includes(transmission);
+                          const isAvailable = transmissions.some(
+                            (availableTransmission) => normalizeValue(availableTransmission) === normalizeValue(transmission)
+                          );
                           return (
                             <label key={transmission} className="flex items-center cursor-pointer">
                               <input
@@ -738,7 +775,7 @@ export default function VehiclesPage() {
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
                               <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                {capitalizeFirst(transmission)}
+                                {formatOptionLabel(transmission)}
                                 {isAvailable && (
                                   <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" title="Available in inventory"></span>
                                 )}
@@ -783,7 +820,9 @@ export default function VehiclesPage() {
                     {expandedSections.fuelType && (
                       <div className="mt-3 space-y-2">
                         {allFuelTypes.slice(0, showMoreItems.fuelType ? allFuelTypes.length : 4).map((fuelType) => {
-                          const isAvailable = fuelTypes.includes(fuelType);
+                          const isAvailable = fuelTypes.some(
+                            (availableFuelType) => normalizeValue(availableFuelType) === normalizeValue(fuelType)
+                          );
                           return (
                             <label key={fuelType} className="flex items-center cursor-pointer">
                               <input
@@ -793,7 +832,7 @@ export default function VehiclesPage() {
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
                               <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                {capitalizeFirst(fuelType)}
+                                {formatOptionLabel(fuelType)}
                                 {isAvailable && (
                                   <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" title="Available in inventory"></span>
                                 )}
